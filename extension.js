@@ -185,8 +185,8 @@ function getWebviewContent(webview, extensionUri) {
     const provider = config.get('provider') || 'demo';
     const model = config.get('openaiModel') || 'gpt-3.5-turbo';
     
-    html = html.replaceAll("{{ provider }}", provider);
-    html = html.replaceAll("{{ model }}", model);
+    html = html.replace(/\{\{\s*provider\s*\}\}/g, provider);
+    html = html.replace(/\{\{\s*model\s*\}\}/g, model);
 
     return html;
 }
