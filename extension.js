@@ -67,6 +67,9 @@ function activate(context) {
                 }
             );
             setupWebviewMessageListener(panel.webview, activeWebviews);
+            panel.onDidDispose(() => {
+                activeWebviews.delete(panel.webview);
+            });
             panel.webview.html = getWebviewContent(panel.webview, context.extensionUri);
         })
     );
@@ -74,9 +77,6 @@ function activate(context) {
 
 function setupWebviewMessageListener(webview, activeWebviews) {
     activeWebviews.add(webview);
-    webview.onDidDispose(() => {
-        activeWebviews.delete(webview);
-    });
 
     webview.onDidReceiveMessage(async (message) => {
         switch (message.command) {
@@ -163,6 +163,9 @@ class TokenSlimWebviewProvider {
             localResourceRoots: [this.extensionUri]
         };
         setupWebviewMessageListener(webviewView.webview, this.activeWebviews);
+        webviewView.onDidDispose(() => {
+            this.activeWebviews.delete(webviewView.webview);
+        });
         webviewView.webview.html = getWebviewContent(webviewView.webview, this.extensionUri);
     }
 }
