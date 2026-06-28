@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conectar ao Token Slim</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #111827;
+            --bg-tertiary: #1f2937;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-indigo: #6366f1;
+            --accent-indigo-hover: #4f46e5;
+            --accent-emerald: #10b981;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --gradient-primary: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --radius-lg: 12px;
+            --radius-md: 8px;
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 480px;
+            padding: 24px;
+            box-sizing: border-box;
+        }
+
+        .auth-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-primary);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .logo-icon {
+            font-size: 32px;
+        }
+
+        .logo-title {
+            font-size: 24px;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .provider-select-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .provider-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 16px 8px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .provider-btn:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .provider-btn.active {
+            border-color: var(--accent-indigo);
+            background: rgba(99, 102, 241, 0.08);
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .provider-btn-icon {
+            font-size: 24px;
+        }
+
+        .provider-btn-name {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .form-group.active {
+            display: block;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        input {
+            width: 100%;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: var(--transition);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent-indigo);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+        }
+
+        .hint-text {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .hint-text a {
+            color: var(--accent-indigo);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .hint-text a:hover {
+            text-decoration: underline;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 24px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .footer-note {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 24px;
+            line-height: 1.5;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="logo-container">
+                <span class="logo-icon">🗜️</span>
+                <span class="logo-title">Token Slim</span>
+            </div>
+            <h2>Conexão Rápida</h2>
+            <div class="subtitle">Autentique e sincronize com seu VSCode instantaneamente</div>
+
+            <div class="provider-select-grid">
+                <div class="provider-btn active" data-provider="openai">
+                    <span class="provider-btn-icon">🧠</span>
+                    <span class="provider-btn-name">OpenAI</span>
+                </div>
+                <div class="provider-btn" data-provider="openrouter">
+                    <span class="provider-btn-icon">🚀</span>
+                    <span class="provider-btn-name">OpenRouter</span>
+                </div>
+                <div class="provider-btn" data-provider="ollama">
+                    <span class="provider-btn-icon">🦙</span>
+                    <span class="provider-btn-name">Ollama</span>
+                </div>
+            </div>
+
+            <!-- OpenAI Form Group -->
+            <div class="form-group active" id="group-openai">
+                <label for="openai-key">Chave de API OpenAI:</label>
+                <input type="password" id="openai-key" placeholder="sk-proj-..." />
+                <div class="hint-text">
+                    <span>Sua chave é armazenada localmente.</span>
+                    <a href="https://platform.openai.com/api-keys" target="_blank">Obter Chave ↗</a>
+                </div>
+            </div>
+
+            <!-- OpenRouter Form Group -->
+            <div class="form-group" id="group-openrouter">
+                <label for="openrouter-key">Chave de API OpenRouter:</label>
+                <input type="password" id="openrouter-key" placeholder="sk-or-..." />
+                <div class="hint-text">
+                    <span>Acesso a Claude, Gemini e outros.</span>
+                    <a href="https://openrouter.ai/keys" target="_blank">Obter Chave ↗</a>
+                </div>
+            </div>
+
+            <!-- Ollama Form Group -->
+            <div class="form-group" id="group-ollama">
+                <label for="ollama-url">URL do Ollama Local:</label>
+                <input type="text" id="ollama-url" value="http://localhost:11434" />
+                <label for="ollama-model" style="margin-top: 12px;">Modelo Ollama:</label>
+                <input type="text" id="ollama-model" value="llama2" placeholder="ex: llama3, mistral" />
+                <div class="hint-text">
+                    <span>Certifique-se de que o Ollama está rodando.</span>
+                </div>
+            </div>
+
+            <button class="submit-btn" id="authorize-btn">
+                <span>🔐 Autorizar no VSCode</span>
+            </button>
+
+            <div class="footer-note">
+                Ao clicar em autorizar, seu navegador solicitará permissão para abrir o Visual Studio Code para concluir a sincronização segura das credenciais.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const buttons = document.querySelectorAll('.provider-btn');
+        const groups = document.querySelectorAll('.form-group');
+        let currentProvider = 'openai';
+
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                buttons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const provider = btn.dataset.provider;
+                currentProvider = provider;
+
+                groups.forEach(g => g.classList.remove('active'));
+                document.getElementById(`group-${provider}`).classList.add('active');
+            });
+        });
+
+        document.getElementById('authorize-btn').addEventListener('click', () => {
+            let token = '';
+            let baseUrl = '';
+            let model = '';
+
+            if (currentProvider === 'openai') {
+                token = document.getElementById('openai-key').value.trim();
+                baseUrl = 'https://api.openai.com/v1';
+                model = 'gpt-3.5-turbo';
+                if (!token) {
+                    alert('Por favor, insira sua Chave de API OpenAI.');
+                    return;
+                }
+            } else if (currentProvider === 'openrouter') {
+                token = document.getElementById('openrouter-key').value.trim();
+                baseUrl = 'https://openrouter.ai/api/v1';
+                model = 'meta-llama/llama-3-8b-instruct:free';
+                if (!token) {
+                    alert('Por favor, insira sua Chave de API OpenRouter.');
+                    return;
+                }
+            } else if (currentProvider === 'ollama') {
+                token = '';
+                baseUrl = document.getElementById('ollama-url').value.trim();
+                model = document.getElementById('ollama-model').value.trim() || 'llama2';
+            }
+
+            // Build deeplink URI
+            // Schema for VSCode is vscode://<publisher>.<extension-name>/<route>
+            const vscodeUri = `vscode://steingui.token-slim/auth?provider=${currentProvider}&token=${encodeURIComponent(token)}&baseUrl=${encodeURIComponent(baseUrl)}&model=${encodeURIComponent(model)}`;
+            
+            // Redirect to deeplink
+            window.location.href = vscodeUri;
+        });
+    </script>
+</body>
+</html>

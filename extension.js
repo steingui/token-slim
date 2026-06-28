@@ -53,6 +53,11 @@ function activate(context) {
         )
     );
 
+    // Register Uri Handler for Deeplinking
+    context.subscriptions.push(
+        vscode.window.registerUriHandler(new TokenSlimUriHandler(activeWebviews))
+    );
+
     // Register Open Chat Panel Command (Full Tab)
     context.subscriptions.push(
         vscode.commands.registerCommand('token-slim.openChat', () => {
@@ -170,6 +175,53 @@ class TokenSlimWebviewProvider {
     }
 }
 
+class TokenSlimUriHandler {
+    constructor(activeWebviews) {
+        this.activeWebviews = activeWebviews;
+    }
+
+    handleUri(uri) {
+        const queryStr = uri.query;
+        const params = new URLSearchParams(queryStr);
+        const token = params.get('token') || '';
+        const provider = params.get('provider') || 'demo';
+        const baseUrl = params.get('baseUrl') || '';
+        const model = params.get('model') || '';
+
+        vscode.window.showInformationMessage(`Token Slim: Conectado com sucesso ao provedor ${provider}!`);
+
+        const config = vscode.workspace.getConfiguration('token-slim');
+        config.update('provider', provider, vscode.ConfigurationTarget.Global).then(() => {
+            config.update('openaiApiKey', token, vscode.ConfigurationTarget.Global).then(() => {
+                if (baseUrl) {
+                    config.update('openaiBaseUrl', baseUrl, vscode.ConfigurationTarget.Global);
+                }
+                if (model) {
+                    config.update('openaiModel', model, vscode.ConfigurationTarget.Global);
+                }
+                
+                // Sync with Flask
+                syncConfigWithFlask();
+                
+                // Broadcast updated configuration to all active webviews
+                for (const webview of this.activeWebviews) {
+                    try {
+                        webview.postMessage({
+                            command: 'configData',
+                            provider: provider,
+                            openaiApiKey: token,
+                            openaiBaseUrl: baseUrl || 'https://api.openai.com/v1',
+                            openaiModel: model || 'gpt-3.5-turbo'
+                        });
+                    } catch (err) {
+                        // ignore disposed webview
+                    }
+                }
+            });
+        });
+    }
+}
+
 function getWebviewContent(webview, extensionUri) {
     const htmlPath = path.join(extensionUri.fsPath, 'templates', 'index.html');
     let html = fs.readFileSync(htmlPath, 'utf8');
@@ -208,7 +260,7 @@ function syncConfigWithFlask() {
     });
 
     const req = http.request({
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: 5000,
         path: '/api/update-config',
         method: 'POST',

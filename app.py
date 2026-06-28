@@ -226,6 +226,11 @@ def index():
     )
 
 
+@app.route("/login")
+def login():
+    return render_template("login.html")
+
+
 @app.route("/api/chat", methods=["POST"])
 def chat():
     data = request.get_json()
@@ -397,5 +402,5 @@ if __name__ == "__main__":
     print(f"\n🗜️  Token Slim")
     print(f"   Provider: {LLM_PROVIDER}")
     print(f"   Model:    {OPENAI_MODEL}")
-    print(f"   URL:      http://localhost:5000\n")
-    app.run(debug=True, port=5000)
+    print(f"   URL:      http://127.0.0.1:5000\n")
+    app.run(debug=True, host='127.0.0.1', port=5000)

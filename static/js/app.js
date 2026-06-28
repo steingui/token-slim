@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
       $statusMsg.textContent = '⏳ Testando conexão...';
       
       try {
-        const resp = await fetch('http://localhost:5000/api/test-connection', {
+        const resp = await fetch('http://127.0.0.1:5000/api/test-connection', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -195,6 +195,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!message.openaiApiKey && message.provider !== 'demo') {
         state.showConfig = true;
         $configCard.style.display = 'block';
+      } else {
+        state.showConfig = false;
+        $configCard.style.display = 'none';
       }
     }
   });
@@ -259,7 +262,7 @@ async function sendMessage() {
   const typingEl = addTypingIndicator();
 
   try {
-    const resp = await fetch('http://localhost:5000/api/chat', {
+    const resp = await fetch('http://127.0.0.1:5000/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -368,7 +371,7 @@ function addTypingIndicator() {
 // ── Stats ──────────────────────────────────────────────
 async function updateStats() {
   try {
-    const resp = await fetch('http://localhost:5000/api/stats');
+    const resp = await fetch('http://127.0.0.1:5000/api/stats');
     const s = await resp.json();
 
     $statTokens.textContent = s.total_tokens_saved.toLocaleString();
@@ -382,7 +385,7 @@ async function updateStats() {
 // ── Clear cache ────────────────────────────────────────
 async function clearCache() {
   try {
-    await fetch('http://localhost:5000/api/clear-cache', { method: 'POST' });
+    await fetch('http://127.0.0.1:5000/api/clear-cache', { method: 'POST' });
     updateStats();
   } catch (_) { /* ignore */ }
 }
@@ -525,7 +528,7 @@ function saveConfiguration() {
 
 async function checkBackendConnection() {
   try {
-    const res = await fetch('http://localhost:5000/api/stats');
+    const res = await fetch('http://127.0.0.1:5000/api/stats');
     if (res.ok) {
       if (!state.connected) {
         state.connected = true;
