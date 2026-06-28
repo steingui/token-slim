@@ -45,7 +45,11 @@
         "token-slim.provider": {
           "type": "string",
           "default": "demo",
-          "enum": ["demo", "openai", "ollama"],
+          "enum": [
+            "demo",
+            "openai",
+            "ollama"
+          ],
           "description": "Qual LLM provider usar para o chat."
         },
         "token-slim.openaiApiKey": {
