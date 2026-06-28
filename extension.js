@@ -2,6 +2,7 @@ const vscode = require('vscode');
 const cp = require('child_process');
 const path = require('path');
 const http = require('http');
+const fs = require('fs');
 
 let flaskProcess = null;
 let outputChannel = null;
@@ -42,10 +43,11 @@ function activate(context) {
                 vscode.ViewColumn.One,
                 {
                     enableScripts: true,
-                    retainContextWhenHidden: true
+                    retainContextWhenHidden: true,
+                    localResourceRoots: [context.extensionUri]
                 }
             );
-            panel.webview.html = getWebviewContent();
+            panel.webview.html = getWebviewContent(panel.webview, context.extensionUri);
         })
     );
 }
@@ -107,56 +109,31 @@ class TokenSlimWebviewProvider {
             enableScripts: true,
             localResourceRoots: [this.extensionUri]
         };
-        webviewView.webview.html = getWebviewContent();
+        webviewView.webview.html = getWebviewContent(webviewView.webview, this.extensionUri);
     }
 }
 
-function getWebviewContent() {
-    return `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Token Slim</title>
-            <style>
-                html, body, iframe {
-                    width: 100%;
-                    height: 100%;
-                    border: none;
-                    margin: 0;
-                    padding: 0;
-                    overflow: hidden;
-                    background-color: #0a0a12;
-                }
-            </style>
-        </head>
-        <body>
-            <iframe id="chat-frame" src="http://localhost:5000"></iframe>
-            <script>
-                // Handle reloading or connection check if Flask is slow to start
-                const frame = document.getElementById('chat-frame');
-                let attempts = 0;
-                
-                function checkConnection() {
-                    fetch('http://localhost:5000/api/stats')
-                        .then(() => {
-                            frame.src = "http://localhost:5000";
-                        })
-                        .catch(() => {
-                            if (attempts < 10) {
-                                attempts++;
-                                setTimeout(checkConnection, 1000);
-                            }
-                        });
-                }
-                
-                // Start check
-                checkConnection();
-            </script>
-        </body>
-        </html>
-    `;
+function getWebviewContent(webview, extensionUri) {
+    const htmlPath = path.join(extensionUri.fsPath, 'templates', 'index.html');
+    let html = fs.readFileSync(htmlPath, 'utf8');
+
+    // Convert CSS path
+    const cssUri = webview.asWebviewUri(vscode.Uri.file(path.join(extensionUri.fsPath, 'static', 'css', 'style.css')));
+    html = html.replace("{{ url_for('static', filename='css/style.css') }}", cssUri.toString());
+
+    // Convert JS path
+    const jsUri = webview.asWebviewUri(vscode.Uri.file(path.join(extensionUri.fsPath, 'static', 'js', 'app.js')));
+    html = html.replace("{{ url_for('static', filename='js/app.js') }}", jsUri.toString());
+
+    // Replace provider and model
+    const config = vscode.workspace.getConfiguration('token-slim');
+    const provider = config.get('provider') || 'demo';
+    const model = config.get('openaiModel') || 'gpt-3.5-turbo';
+    
+    html = html.replaceAll("{{ provider }}", provider);
+    html = html.replaceAll("{{ model }}", model);
+
+    return html;
 }
 
 function deactivate() {
