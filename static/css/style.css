@@ -781,6 +781,99 @@ input[type="range"]::-webkit-slider-thumb {
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
+/* ── Provider grid selection ── */
+.provider-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.provider-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 10px;
+  cursor: pointer;
+  text-align: center;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  user-select: none;
+}
+
+.provider-card:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.provider-card.active {
+  border-color: var(--accent-indigo);
+  background: rgba(99, 102, 241, 0.08);
+  box-shadow: var(--shadow-glow);
+}
+
+.provider-icon {
+  font-size: 24px;
+  margin-bottom: 2px;
+  transition: var(--transition);
+}
+
+.provider-card:hover .provider-icon {
+  transform: scale(1.15);
+}
+
+.provider-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.provider-desc {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.connection-status-msg {
+  transition: var(--transition);
+  animation: fadeIn 0.3s ease;
+}
+
+.connection-status-msg.success {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--accent-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.connection-status-msg.error {
+  background: rgba(244, 63, 94, 0.12);
+  color: var(--accent-rose);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  word-break: break-word;
+}
+
+.connection-status-msg.loading {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--accent-amber);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  transition: var(--transition);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-secondary);
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 768px) {
   .app {

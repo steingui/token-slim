@@ -116,27 +116,56 @@
           <!-- Onboarding Form -->
           <div class="config-card" id="config-form-card" style="margin-top: 15px;">
             <div class="config-card-header">⚙️ Conectar seu Provider</div>
-            <div class="form-field">
-              <label for="provider-select">Provider:</label>
-              <select id="provider-select">
-                <option value="demo">Demonstração (Sem chave)</option>
-                <option value="openai">OpenAI / OpenRouter / Outros</option>
-                <option value="ollama">Ollama (Local)</option>
-              </select>
+            
+            <div class="provider-grid">
+              <div class="provider-card active" data-provider="demo">
+                <div class="provider-icon">🧪</div>
+                <div class="provider-name">Demo</div>
+                <div class="provider-desc">Testar sem API Key</div>
+              </div>
+              <div class="provider-card" data-provider="openai">
+                <div class="provider-icon">🧠</div>
+                <div class="provider-name">OpenAI</div>
+                <div class="provider-desc">gpt-4o, gpt-3.5...</div>
+              </div>
+              <div class="provider-card" data-provider="ollama">
+                <div class="provider-icon">🦙</div>
+                <div class="provider-name">Ollama</div>
+                <div class="provider-desc">Modelos locais</div>
+              </div>
+              <div class="provider-card" data-provider="openrouter">
+                <div class="provider-icon">🚀</div>
+                <div class="provider-name">OpenRouter</div>
+                <div class="provider-desc">Claude, Gemini...</div>
+              </div>
             </div>
-            <div class="form-field" id="api-key-field">
-              <label for="api-key-input">Chave de API:</label>
-              <input type="password" id="api-key-input" placeholder="Insira sua chave de API..." />
+
+            <!-- Hidden input to keep compatibility with existing JS or we can use it to store state -->
+            <input type="hidden" id="provider-select" value="demo">
+
+            <div class="form-fields-container" style="margin-top: 15px;">
+              <div class="form-field" id="api-key-field" style="display: none;">
+                <label for="api-key-input">Chave de API (API Key):</label>
+                <input type="password" id="api-key-input" placeholder="Insira sua chave de API (sk-...)" />
+                <span class="field-hint" id="api-key-hint" style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Sua chave é salva localmente no VSCode.</span>
+              </div>
+              <div class="form-field" id="base-url-field" style="display: none;">
+                <label for="base-url-input">Base URL:</label>
+                <input type="text" id="base-url-input" placeholder="https://api.openai.com/v1" />
+              </div>
+              <div class="form-field" id="model-field" style="display: none;">
+                <label for="model-input">Modelo:</label>
+                <input type="text" id="model-input" placeholder="gpt-3.5-turbo" />
+              </div>
             </div>
-            <div class="form-field" id="base-url-field">
-              <label for="base-url-input">Base URL:</label>
-              <input type="text" id="base-url-input" placeholder="https://api.openai.com/v1" />
+
+            <!-- Connection Status message -->
+            <div id="connection-status-msg" class="connection-status-msg" style="display: none; padding: 10px; border-radius: 6px; font-size: 12px; margin-top: 12px; font-family: var(--font-sans);"></div>
+
+            <div class="config-actions" style="margin-top: 15px; display: flex; gap: 10px;">
+              <button id="test-config-btn" class="btn-secondary" style="flex: 1; padding: 10px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); background: var(--bg-tertiary); color: var(--text-primary); transition: var(--transition);">🧪 Testar Conexão</button>
+              <button id="save-config-btn" class="btn-primary" style="flex: 1; padding: 10px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: var(--radius-sm); border: none; background: var(--gradient-primary); color: white; transition: var(--transition);">💾 Salvar e Iniciar</button>
             </div>
-            <div class="form-field" id="model-field">
-              <label for="model-input">Modelo:</label>
-              <input type="text" id="model-input" placeholder="gpt-3.5-turbo" />
-            </div>
-            <button id="save-config-btn" class="btn-primary" style="margin-top: 10px; width: 100%;">Salvar Configurações</button>
           </div>
 
           <div class="welcome-tips" style="margin-top: 20px;">

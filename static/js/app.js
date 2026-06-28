@@ -60,8 +60,89 @@ document.addEventListener('DOMContentLoaded', () => {
   $sendBtn.addEventListener('click',      sendMessage);
   $input.addEventListener('keydown',      onInputKey);
 
-  // Configuration form events
-  $providerSelect.addEventListener('change', (e) => updateFormVisibility(e.target.value));
+  // Configuration card click events
+  document.querySelectorAll('.provider-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.provider-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      
+      const provider = card.dataset.provider;
+      $providerSelect.value = provider === 'openrouter' ? 'openai' : provider;
+      
+      // Set default values based on selected card
+      if (provider === 'demo') {
+        // no defaults needed
+      } else if (provider === 'openai') {
+        if (!$baseUrlInput.value || $baseUrlInput.value.includes('openrouter.ai') || $baseUrlInput.value.includes('11434')) {
+          $baseUrlInput.value = 'https://api.openai.com/v1';
+        }
+        if (!$modelInput.value || $modelInput.value.includes('llama') || $modelInput.value.includes('llama2')) {
+          $modelInput.value = 'gpt-3.5-turbo';
+        }
+      } else if (provider === 'ollama') {
+        if (!$baseUrlInput.value || $baseUrlInput.value.includes('api.openai.com') || $baseUrlInput.value.includes('openrouter.ai')) {
+          $baseUrlInput.value = 'http://localhost:11434';
+        }
+        if (!$modelInput.value || $modelInput.value.includes('gpt-') || $modelInput.value.includes('llama-3-8b')) {
+          $modelInput.value = 'llama2';
+        }
+      } else if (provider === 'openrouter') {
+        $baseUrlInput.value = 'https://openrouter.ai/api/v1';
+        if (!$modelInput.value || $modelInput.value.includes('gpt-') || $modelInput.value.includes('llama2')) {
+          $modelInput.value = 'meta-llama/llama-3-8b-instruct:free';
+        }
+      }
+      
+      // Reset connection status message on provider change
+      const $statusMsg = document.getElementById('connection-status-msg');
+      if ($statusMsg) {
+        $statusMsg.style.display = 'none';
+        $statusMsg.textContent = '';
+      }
+      
+      updateFormVisibility(provider);
+    });
+  });
+
+  // Test connection button
+  const $testConfigBtn = document.getElementById('test-config-btn');
+  const $statusMsg = document.getElementById('connection-status-msg');
+  if ($testConfigBtn) {
+    $testConfigBtn.addEventListener('click', async () => {
+      const activeCard = document.querySelector('.provider-card.active');
+      const provider = activeCard ? activeCard.dataset.provider : 'demo';
+      
+      $statusMsg.style.display = 'block';
+      $statusMsg.className = 'connection-status-msg loading';
+      $statusMsg.textContent = '⏳ Testando conexão...';
+      
+      try {
+        const resp = await fetch('http://localhost:5000/api/test-connection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: provider === 'openrouter' ? 'openai' : provider,
+            openaiApiKey: $apiKeyInput.value.trim(),
+            openaiBaseUrl: $baseUrlInput.value.trim(),
+            openaiModel: $modelInput.value.trim()
+          })
+        });
+        
+        const data = await resp.json();
+        if (data.success) {
+          $statusMsg.className = 'connection-status-msg success';
+          $statusMsg.textContent = `🟢 Conectado! ${data.message}`;
+        } else {
+          $statusMsg.className = 'connection-status-msg error';
+          $statusMsg.textContent = `❌ Falha na conexão: ${data.error}`;
+        }
+      } catch (err) {
+        $statusMsg.className = 'connection-status-msg error';
+        $statusMsg.textContent = `❌ Erro de conexão com o servidor local: ${err.message}`;
+      }
+    });
+  }
+
   $saveConfigBtn.addEventListener('click', saveConfiguration);
   if ($providerInfo) {
     $providerInfo.addEventListener('click', () => {
@@ -93,7 +174,22 @@ document.addEventListener('DOMContentLoaded', () => {
       $apiKeyInput.value = message.openaiApiKey;
       $baseUrlInput.value = message.openaiBaseUrl;
       $modelInput.value = message.openaiModel;
-      updateFormVisibility(message.provider);
+      
+      let cardProvider = message.provider;
+      if (message.provider === 'openai' && message.openaiBaseUrl.includes('openrouter.ai')) {
+        cardProvider = 'openrouter';
+      }
+      
+      // Update visual selection
+      document.querySelectorAll('.provider-card').forEach(c => {
+        if (c.dataset.provider === cardProvider) {
+          c.classList.add('active');
+        } else {
+          c.classList.remove('active');
+        }
+      });
+      
+      updateFormVisibility(cardProvider);
       
       // Auto-open config if API key is blank and provider isn't 'demo'
       if (!message.openaiApiKey && message.provider !== 'demo') {
@@ -102,6 +198,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
+
+  // Detect local Ollama service
+  detectLocalOllama();
 
   // Start ping loop to check if Flask server is online
   checkBackendConnection();
@@ -346,6 +445,8 @@ function escapeHtml(str) {
 
 // ── Onboarding / Config & Connection Helpers ─────────────
 function updateFormVisibility(provider) {
+  const apiKeyHint = document.getElementById('api-key-hint');
+  
   if (provider === 'demo') {
     $apiKeyField.style.display = 'none';
     $baseUrlField.style.display = 'none';
@@ -354,29 +455,44 @@ function updateFormVisibility(provider) {
     $apiKeyField.style.display = 'none';
     $baseUrlField.style.display = 'block';
     $modelField.style.display = 'block';
-    if (!$baseUrlInput.value || $baseUrlInput.value.includes('api.openai.com')) {
+    if (!$baseUrlInput.value || $baseUrlInput.value.includes('api.openai.com') || $baseUrlInput.value.includes('openrouter.ai')) {
       $baseUrlInput.value = 'http://localhost:11434';
     }
-    if (!$modelInput.value || $modelInput.value.includes('gpt-')) {
+    if (!$modelInput.value || $modelInput.value.includes('gpt-') || $modelInput.value.includes('llama-3-8b')) {
       $modelInput.value = 'llama2';
+    }
+  } else if (provider === 'openrouter') {
+    $apiKeyField.style.display = 'block';
+    $baseUrlField.style.display = 'block';
+    $modelField.style.display = 'block';
+    if (apiKeyHint) apiKeyHint.textContent = 'Adquira sua chave em openrouter.ai/keys';
+    if (!$baseUrlInput.value || $baseUrlInput.value.includes('api.openai.com') || $baseUrlInput.value.includes('11434')) {
+      $baseUrlInput.value = 'https://openrouter.ai/api/v1';
+    }
+    if (!$modelInput.value || $modelInput.value.includes('gpt-') || $modelInput.value.includes('llama2')) {
+      $modelInput.value = 'meta-llama/llama-3-8b-instruct:free';
     }
   } else {
     // openai / custom
     $apiKeyField.style.display = 'block';
     $baseUrlField.style.display = 'block';
     $modelField.style.display = 'block';
-    if ($baseUrlInput.value.includes('11434')) {
+    if (apiKeyHint) apiKeyHint.textContent = 'Adquira sua chave em platform.openai.com';
+    if (!$baseUrlInput.value || $baseUrlInput.value.includes('openrouter.ai') || $baseUrlInput.value.includes('11434')) {
       $baseUrlInput.value = 'https://api.openai.com/v1';
     }
-    if ($modelInput.value === 'llama2') {
+    if (!$modelInput.value || $modelInput.value.includes('llama') || $modelInput.value.includes('llama2')) {
       $modelInput.value = 'gpt-3.5-turbo';
     }
   }
 }
 
 function saveConfiguration() {
+  const activeCard = document.querySelector('.provider-card.active');
+  const provider = activeCard ? activeCard.dataset.provider : 'demo';
+
   const data = {
-    provider: $providerSelect.value,
+    provider: provider === 'openrouter' ? 'openai' : provider,
     openaiApiKey: $apiKeyInput.value.trim(),
     openaiBaseUrl: $baseUrlInput.value.trim(),
     openaiModel: $modelInput.value.trim()
@@ -432,3 +548,23 @@ async function checkBackendConnection() {
     $input.placeholder = 'Iniciando otimizador. Por favor, aguarde...';
   }
 }
+
+async function detectLocalOllama() {
+  try {
+    const res = await fetch('http://localhost:11434/api/tags');
+    if (res.ok) {
+      const ollamaCard = document.querySelector('.provider-card[data-provider="ollama"]');
+      if (ollamaCard) {
+        const desc = ollamaCard.querySelector('.provider-desc');
+        if (desc) {
+          desc.textContent = '🟢 Detectado localmente!';
+          desc.style.color = 'var(--accent-emerald)';
+          desc.style.fontWeight = 'bold';
+        }
+      }
+    }
+  } catch (e) {
+    // Ollama not running local
+  }
+}
+

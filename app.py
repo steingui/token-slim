@@ -336,6 +336,60 @@ def clear_cache():
     return jsonify({"status": "ok", "message": "Cache limpo"})
 
 
+@app.route("/api/update-config", methods=["POST"])
+def update_config():
+    global LLM_PROVIDER, OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL, _openai_client
+    data = request.get_json()
+    LLM_PROVIDER = data.get("provider", LLM_PROVIDER)
+    OPENAI_API_KEY = data.get("openaiApiKey", OPENAI_API_KEY)
+    OPENAI_BASE_URL = data.get("openaiBaseUrl", OPENAI_BASE_URL)
+    OPENAI_MODEL = data.get("openaiModel", OPENAI_MODEL)
+    
+    # Reset client so it gets re-initialized on next call
+    _openai_client = None
+    
+    print(f"[config] Updated dynamically: Provider={LLM_PROVIDER}, Model={OPENAI_MODEL}, BaseURL={OPENAI_BASE_URL}")
+    return jsonify({
+        "status": "success",
+        "provider": LLM_PROVIDER,
+        "model": OPENAI_MODEL,
+        "base_url": OPENAI_BASE_URL
+    })
+
+
+@app.route("/api/test-connection", methods=["POST"])
+def test_connection():
+    data = request.get_json()
+    provider = data.get("provider", "demo")
+    api_key = data.get("openaiApiKey", "")
+    base_url = data.get("openaiBaseUrl", "https://api.openai.com/v1")
+    model = data.get("openaiModel", "gpt-3.5-turbo")
+
+    if provider == "demo":
+        return jsonify({"success": True, "message": "Modo de demonstração funcionando!"})
+
+    try:
+        from openai import OpenAI
+        client = OpenAI(
+            api_key=api_key or "demo",
+            base_url=base_url,
+        )
+        if provider == "ollama":
+            # For Ollama, we can list models to check if the Ollama service is running/responsive
+            client.models.list()
+        else:
+            # For OpenAI/OpenRouter/Custom, try a quick 1-token request
+            client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": "ping"}],
+                max_tokens=1
+            )
+        return jsonify({"success": True, "message": "Conexão estabelecida com sucesso!"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+
+
 # ============================================================
 # Entry point
 # ============================================================

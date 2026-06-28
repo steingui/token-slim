@@ -19,9 +19,8 @@ function activate(context) {
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('token-slim')) {
-                outputChannel.appendLine("Token Slim configuration changed, restarting server...");
-                stopFlaskServer();
-                startFlaskServer(context);
+                outputChannel.appendLine("Token Slim configuration changed, syncing dynamically with Flask...");
+                syncConfigWithFlask();
 
                 // Broadcast configuration update to all active webviews
                 const config = vscode.workspace.getConfiguration('token-slim');
@@ -191,6 +190,45 @@ function getWebviewContent(webview, extensionUri) {
     return html;
 }
 
+function syncConfigWithFlask() {
+    const config = vscode.workspace.getConfiguration('token-slim');
+    const provider = config.get('provider') || 'demo';
+    const apiKey = config.get('openaiApiKey') || '';
+    const baseUrl = config.get('openaiBaseUrl') || 'https://api.openai.com/v1';
+    const model = config.get('openaiModel') || 'gpt-3.5-turbo';
+
+    const data = JSON.stringify({
+        provider: provider,
+        openaiApiKey: apiKey,
+        openaiBaseUrl: baseUrl,
+        openaiModel: model
+    });
+
+    const req = http.request({
+        hostname: 'localhost',
+        port: 5000,
+        path: '/api/update-config',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(data)
+        }
+    }, (res) => {
+        if (outputChannel) {
+            outputChannel.appendLine(`Configuration synced dynamically with Flask. Status: ${res.statusCode}`);
+        }
+    });
+
+    req.on('error', (e) => {
+        if (outputChannel) {
+            outputChannel.appendLine(`Failed to sync config with Flask: ${e.message}`);
+        }
+    });
+
+    req.write(data);
+    req.end();
+}
+
 function deactivate() {
     stopFlaskServer();
 }
@@ -199,3 +237,4 @@ module.exports = {
     activate,
     deactivate
 };
+
