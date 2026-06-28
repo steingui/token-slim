@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Token Slim — Chat with real-time LLM optimization. Compress prompts and cache responses with toggles.">
+  <title>Token Slim — LLM Optimizer Chat</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗜️</text></svg>">
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Sidebar ──────────────────────────────── -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="logo">🗜️</span>
+        <h1>Token Slim</h1>
+        <span class="version">MVP</span>
+      </div>
+
+      <!-- Toggles -->
+      <div class="toggle-section">
+        <span class="toggle-section-title">⚡ Otimizações</span>
+
+        <!-- Compression Toggle -->
+        <div class="toggle-card" id="card-compression">
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-icon">🗜️</span>
+              <span class="toggle-label">Compressão</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggle-compression">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-desc">LLMLingua-2 — remove tokens redundantes</div>
+          <div class="range-group" id="rate-group">
+            <div class="range-label">
+              <span>Taxa de retenção</span>
+              <span class="range-value" id="rate-value">50%</span>
+            </div>
+            <input type="range" id="compression-rate" min="0.2" max="0.9" step="0.05" value="0.5">
+          </div>
+        </div>
+
+        <!-- Cache Toggle -->
+        <div class="toggle-card" id="card-cache">
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-icon">💾</span>
+              <span class="toggle-label">Cache Semântico</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggle-cache">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-desc">Respostas cacheadas por similaridade vetorial</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-section">
+        <span class="toggle-section-title">📊 Economia da Sessão</span>
+
+        <div class="stat-card">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-content">
+            <div class="stat-label">Tokens salvos</div>
+            <div class="stat-value cyan" id="stat-tokens">0</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-content">
+            <div class="stat-label">Cache hits</div>
+            <div class="stat-value emerald" id="stat-cache">0/0 (0%)</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-content">
+            <div class="stat-label">Custo economizado</div>
+            <div class="stat-value amber" id="stat-cost">$0.0000</div>
+          </div>
+        </div>
+
+        <div class="provider-badge">
+          {{ provider }} · {{ model }}
+        </div>
+
+        <button class="btn-icon" onclick="clearCache()" title="Limpar cache" style="width:100%;font-size:12px;height:32px;">
+          🗑️ Limpar Cache
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── Main Chat ────────────────────────────── -->
+    <main class="main">
+      <div class="chat-header">
+        <span class="chat-title">Nova conversa</span>
+      </div>
+
+      <div class="chat-messages" id="chat-messages">
+        <!-- Welcome screen -->
+        <div class="welcome" id="welcome">
+          <div class="welcome-icon">🗜️</div>
+          <h2>Token Slim</h2>
+          <p>Converse com qualquer LLM e veja em tempo real o impacto das otimizações de custo.</p>
+          <p style="font-size:12px;color:var(--text-muted);">Ative os toggles na sidebar e comece a conversar.</p>
+          <div class="welcome-tips">
+            <div class="tip" data-prompt="O que é Flask e como ele funciona?">
+              💬 Pergunte sobre Flask
+            </div>
+            <div class="tip" data-prompt="Explique como funciona a otimização de tokens para LLMs com compressão de prompts e cache semântico">
+              🗜️ Sobre otimização de tokens
+            </div>
+            <div class="tip" data-prompt="Me explique Python de forma simples">
+              🐍 Sobre Python
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <div class="input-wrapper">
+          <textarea id="chat-input" placeholder="Digite sua mensagem..." rows="1"></textarea>
+          <button id="send-btn">➤</button>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

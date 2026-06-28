@@ -1,0 +1,6 @@
+flask
+python-dotenv
+llmlingua
+gptcache
+openai
+numpy
