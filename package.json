@@ -1,0 +1,75 @@
+{
+  "name": "token-slim",
+  "displayName": "Token Slim",
+  "description": "LLM Chat Optimizer with prompt compression and semantic cache.",
+  "version": "0.1.0",
+  "publisher": "steingui",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Education",
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "commands": [
+      {
+        "command": "token-slim.openChat",
+        "title": "Token Slim: Open Chat Panel"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "token-slim-container",
+          "title": "Token Slim",
+          "icon": "$(circuit-board)"
+        }
+      ]
+    },
+    "views": {
+      "token-slim-container": [
+        {
+          "type": "webview",
+          "id": "token-slim.sidebarView",
+          "name": "Token Slim Chat"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Token Slim",
+      "properties": {
+        "token-slim.provider": {
+          "type": "string",
+          "default": "demo",
+          "enum": ["demo", "openai", "ollama"],
+          "description": "Qual LLM provider usar para o chat."
+        },
+        "token-slim.openaiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Sua chave de API para o provider selecionado (ex: OpenAI)."
+        },
+        "token-slim.openaiBaseUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "Endpoint base do LLM (mude para Ollama, OpenRouter, etc)."
+        },
+        "token-slim.openaiModel": {
+          "type": "string",
+          "default": "gpt-3.5-turbo",
+          "description": "Modelo a ser consultado."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "postinstall": "npm install --save-dev @types/vscode"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.125.0"
+  }
+}
