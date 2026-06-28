@@ -3,12 +3,22 @@
  * Handles chat, toggles, stats, and markdown rendering.
  */
 
+// ── VSCode API Bridge ───────────────────────────────────
+let vscode = null;
+try {
+  vscode = acquireVsCodeApi();
+} catch (e) {
+  // Not running inside VSCode
+}
+
 // ── State ──────────────────────────────────────────────
 const state = {
   compression: false,
   cache: false,
   compressionRate: 0.5,
   sending: false,
+  connected: false,
+  showConfig: false,
 };
 
 // ── DOM refs ───────────────────────────────────────────
@@ -29,6 +39,19 @@ const $statTokens  = document.getElementById('stat-tokens');
 const $statCache   = document.getElementById('stat-cache');
 const $statCost    = document.getElementById('stat-cost');
 
+// Status & Onboarding DOM
+const $statusBadge   = document.getElementById('status-badge');
+const $providerInfo  = document.getElementById('sidebar-provider-info');
+const $configCard    = document.getElementById('config-form-card');
+const $providerSelect = document.getElementById('provider-select');
+const $apiKeyInput   = document.getElementById('api-key-input');
+const $apiKeyField   = document.getElementById('api-key-field');
+const $baseUrlInput  = document.getElementById('base-url-input');
+const $baseUrlField  = document.getElementById('base-url-field');
+const $modelInput    = document.getElementById('model-input');
+const $modelField    = document.getElementById('model-field');
+const $saveConfigBtn = document.getElementById('save-config-btn');
+
 // ── Init ───────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   $compToggle.addEventListener('change',  onCompressionToggle);
@@ -37,13 +60,52 @@ document.addEventListener('DOMContentLoaded', () => {
   $sendBtn.addEventListener('click',      sendMessage);
   $input.addEventListener('keydown',      onInputKey);
 
+  // Configuration form events
+  $providerSelect.addEventListener('change', (e) => updateFormVisibility(e.target.value));
+  $saveConfigBtn.addEventListener('click', saveConfiguration);
+  if ($providerInfo) {
+    $providerInfo.addEventListener('click', () => {
+      state.showConfig = !state.showConfig;
+      $configCard.style.display = state.showConfig ? 'block' : 'none';
+    });
+  }
+
   // Tip clicks
   document.querySelectorAll('.tip').forEach(tip => {
     tip.addEventListener('click', () => {
-      $input.value = tip.dataset.prompt;
-      $input.focus();
+      if (state.connected) {
+        $input.value = tip.dataset.prompt;
+        $input.focus();
+      }
     });
   });
+
+  // Load configuration from VSCode settings
+  if (vscode) {
+    vscode.postMessage({ command: 'getConfig' });
+  }
+
+  // Listen for config data back from VSCode
+  window.addEventListener('message', event => {
+    const message = event.data;
+    if (message.command === 'configData') {
+      $providerSelect.value = message.provider;
+      $apiKeyInput.value = message.openaiApiKey;
+      $baseUrlInput.value = message.openaiBaseUrl;
+      $modelInput.value = message.openaiModel;
+      updateFormVisibility(message.provider);
+      
+      // Auto-open config if API key is blank and provider isn't 'demo'
+      if (!message.openaiApiKey && message.provider !== 'demo') {
+        state.showConfig = true;
+        $configCard.style.display = 'block';
+      }
+    }
+  });
+
+  // Start ping loop to check if Flask server is online
+  checkBackendConnection();
+  setInterval(checkBackendConnection, 2000);
 
   $input.focus();
 });
@@ -280,4 +342,93 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+// ── Onboarding / Config & Connection Helpers ─────────────
+function updateFormVisibility(provider) {
+  if (provider === 'demo') {
+    $apiKeyField.style.display = 'none';
+    $baseUrlField.style.display = 'none';
+    $modelField.style.display = 'none';
+  } else if (provider === 'ollama') {
+    $apiKeyField.style.display = 'none';
+    $baseUrlField.style.display = 'block';
+    $modelField.style.display = 'block';
+    if (!$baseUrlInput.value || $baseUrlInput.value.includes('api.openai.com')) {
+      $baseUrlInput.value = 'http://localhost:11434';
+    }
+    if (!$modelInput.value || $modelInput.value.includes('gpt-')) {
+      $modelInput.value = 'llama2';
+    }
+  } else {
+    // openai / custom
+    $apiKeyField.style.display = 'block';
+    $baseUrlField.style.display = 'block';
+    $modelField.style.display = 'block';
+    if ($baseUrlInput.value.includes('11434')) {
+      $baseUrlInput.value = 'https://api.openai.com/v1';
+    }
+    if ($modelInput.value === 'llama2') {
+      $modelInput.value = 'gpt-3.5-turbo';
+    }
+  }
+}
+
+function saveConfiguration() {
+  const data = {
+    provider: $providerSelect.value,
+    openaiApiKey: $apiKeyInput.value.trim(),
+    openaiBaseUrl: $baseUrlInput.value.trim(),
+    openaiModel: $modelInput.value.trim()
+  };
+
+  if (data.provider === 'openai' && !data.openaiApiKey) {
+    alert('Por favor, insira a chave de API para o provider selecionado.');
+    return;
+  }
+
+  if (vscode) {
+    vscode.postMessage({
+      command: 'updateConfig',
+      data: data
+    });
+  } else {
+    alert('Configuração simulada com sucesso!');
+  }
+
+  state.showConfig = false;
+  $configCard.style.display = 'none';
+
+  // Request new config display info update
+  setTimeout(() => {
+    if (vscode) {
+      vscode.postMessage({ command: 'getConfig' });
+    }
+  }, 1000);
+}
+
+async function checkBackendConnection() {
+  try {
+    const res = await fetch('http://localhost:5000/api/stats');
+    if (res.ok) {
+      if (!state.connected) {
+        state.connected = true;
+        $statusBadge.textContent = '🟢 Conectado';
+        $statusBadge.className = 'status-indicator connected';
+        $input.removeAttribute('disabled');
+        $sendBtn.removeAttribute('disabled');
+        $input.placeholder = 'Digite sua mensagem...';
+        updateStats();
+      }
+    } else {
+      throw new Error();
+    }
+  } catch (e) {
+    state.connected = false;
+    $statusBadge.textContent = '⏳ Iniciando...';
+    $statusBadge.className = 'status-indicator loading';
+    $input.setAttribute('disabled', 'true');
+    $sendBtn.setAttribute('disabled', 'true');
+    $input.placeholder = 'Iniciando otimizador. Por favor, aguarde...';
+  }
 }

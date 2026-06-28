@@ -12,6 +12,7 @@ function activate(context) {
     outputChannel.appendLine("Token Slim extension activating...");
 
     // Start local Flask server
+    const activeWebviews = new Set();
     startFlaskServer(context);
 
     // Watch configuration changes
@@ -21,12 +22,31 @@ function activate(context) {
                 outputChannel.appendLine("Token Slim configuration changed, restarting server...");
                 stopFlaskServer();
                 startFlaskServer(context);
+
+                // Broadcast configuration update to all active webviews
+                const config = vscode.workspace.getConfiguration('token-slim');
+                const provider = config.get('provider') || 'demo';
+                const model = config.get('openaiModel') || 'gpt-3.5-turbo';
+                
+                for (const webview of activeWebviews) {
+                    try {
+                        webview.postMessage({
+                            command: 'configData',
+                            provider: provider,
+                            openaiApiKey: config.get('openaiApiKey') || '',
+                            openaiBaseUrl: config.get('openaiBaseUrl') || 'https://api.openai.com/v1',
+                            openaiModel: model
+                        });
+                    } catch (err) {
+                        // ignore disposed webview
+                    }
+                }
             }
         })
     );
 
     // Register Webview View Provider (Sidebar)
-    const sidebarProvider = new TokenSlimWebviewProvider(context.extensionUri);
+    const sidebarProvider = new TokenSlimWebviewProvider(context.extensionUri, activeWebviews);
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(
             "token-slim.sidebarView",
@@ -47,9 +67,42 @@ function activate(context) {
                     localResourceRoots: [context.extensionUri]
                 }
             );
+            setupWebviewMessageListener(panel.webview, activeWebviews);
             panel.webview.html = getWebviewContent(panel.webview, context.extensionUri);
         })
     );
+}
+
+function setupWebviewMessageListener(webview, activeWebviews) {
+    activeWebviews.add(webview);
+    webview.onDidDispose(() => {
+        activeWebviews.delete(webview);
+    });
+
+    webview.onDidReceiveMessage(async (message) => {
+        switch (message.command) {
+            case 'getConfig': {
+                const config = vscode.workspace.getConfiguration('token-slim');
+                webview.postMessage({
+                    command: 'configData',
+                    provider: config.get('provider') || 'demo',
+                    openaiApiKey: config.get('openaiApiKey') || '',
+                    openaiBaseUrl: config.get('openaiBaseUrl') || 'https://api.openai.com/v1',
+                    openaiModel: config.get('openaiModel') || 'gpt-3.5-turbo'
+                });
+                break;
+            }
+            case 'updateConfig': {
+                const config = vscode.workspace.getConfiguration('token-slim');
+                const data = message.data;
+                await config.update('provider', data.provider, vscode.ConfigurationTarget.Global);
+                await config.update('openaiApiKey', data.openaiApiKey, vscode.ConfigurationTarget.Global);
+                await config.update('openaiBaseUrl', data.openaiBaseUrl, vscode.ConfigurationTarget.Global);
+                await config.update('openaiModel', data.openaiModel, vscode.ConfigurationTarget.Global);
+                break;
+            }
+        }
+    });
 }
 
 function startFlaskServer(context) {
@@ -100,8 +153,9 @@ function stopFlaskServer() {
 }
 
 class TokenSlimWebviewProvider {
-    constructor(extensionUri) {
+    constructor(extensionUri, activeWebviews) {
         this.extensionUri = extensionUri;
+        this.activeWebviews = activeWebviews;
     }
 
     resolveWebviewView(webviewView, context, token) {
@@ -109,6 +163,7 @@ class TokenSlimWebviewProvider {
             enableScripts: true,
             localResourceRoots: [this.extensionUri]
         };
+        setupWebviewMessageListener(webviewView.webview, this.activeWebviews);
         webviewView.webview.html = getWebviewContent(webviewView.webview, this.extensionUri);
     }
 }

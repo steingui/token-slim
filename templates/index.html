@@ -89,8 +89,8 @@
           </div>
         </div>
 
-        <div class="provider-badge">
-          {{ provider }} · {{ model }}
+        <div class="provider-badge clickable" id="sidebar-provider-info" title="Clique para configurar o provider">
+          {{ provider }} · {{ model }} ⚙️
         </div>
 
         <button class="btn-icon" onclick="clearCache()" title="Limpar cache" style="width:100%;font-size:12px;height:32px;">
@@ -103,6 +103,7 @@
     <main class="main">
       <div class="chat-header">
         <span class="chat-title">Nova conversa</span>
+        <span class="status-indicator loading" id="status-badge">⏳ Conectando...</span>
       </div>
 
       <div class="chat-messages" id="chat-messages">
@@ -111,8 +112,34 @@
           <div class="welcome-icon">🗜️</div>
           <h2>Token Slim</h2>
           <p>Converse com qualquer LLM e veja em tempo real o impacto das otimizações de custo.</p>
-          <p style="font-size:12px;color:var(--text-muted);">Ative os toggles na sidebar e comece a conversar.</p>
-          <div class="welcome-tips">
+
+          <!-- Onboarding Form -->
+          <div class="config-card" id="config-form-card" style="margin-top: 15px;">
+            <div class="config-card-header">⚙️ Conectar seu Provider</div>
+            <div class="form-field">
+              <label for="provider-select">Provider:</label>
+              <select id="provider-select">
+                <option value="demo">Demonstração (Sem chave)</option>
+                <option value="openai">OpenAI / OpenRouter / Outros</option>
+                <option value="ollama">Ollama (Local)</option>
+              </select>
+            </div>
+            <div class="form-field" id="api-key-field">
+              <label for="api-key-input">Chave de API:</label>
+              <input type="password" id="api-key-input" placeholder="Insira sua chave de API..." />
+            </div>
+            <div class="form-field" id="base-url-field">
+              <label for="base-url-input">Base URL:</label>
+              <input type="text" id="base-url-input" placeholder="https://api.openai.com/v1" />
+            </div>
+            <div class="form-field" id="model-field">
+              <label for="model-input">Modelo:</label>
+              <input type="text" id="model-input" placeholder="gpt-3.5-turbo" />
+            </div>
+            <button id="save-config-btn" class="btn-primary" style="margin-top: 10px; width: 100%;">Salvar Configurações</button>
+          </div>
+
+          <div class="welcome-tips" style="margin-top: 20px;">
             <div class="tip" data-prompt="O que é Flask e como ele funciona?">
               💬 Pergunte sobre Flask
             </div>
