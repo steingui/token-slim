@@ -168,42 +168,70 @@ def get_openai_client():
 
 
 def call_llm(message, history=None):
-    """Call the configured LLM provider."""
+    """Call the configured LLM provider with robust error handling."""
     if LLM_PROVIDER == "demo":
         return _call_demo(message)
 
-    if LLM_PROVIDER == "anthropic":
-        import requests
-        headers = {
-            "x-api-key": OPENAI_API_KEY,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json"
-        }
-        data = {
-            "model": OPENAI_MODEL or "claude-3-5-sonnet-20240620",
-            "max_tokens": 1024,
-            "messages": [{"role": "user", "content": message}]
-        }
-        resp = requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=data)
-        if resp.status_code != 200:
-            raise Exception(f"Anthropic API Error ({resp.status_code}): {resp.text}")
-        return resp.json()["content"][0]["text"]
+    try:
+        if LLM_PROVIDER == "anthropic":
+            import requests
+            headers = {
+                "x-api-key": OPENAI_API_KEY,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json"
+            }
+            data = {
+                "model": OPENAI_MODEL or "claude-3-5-sonnet-20240620",
+                "max_tokens": 1024,
+                "messages": [{"role": "user", "content": message}]
+            }
+            resp = requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=data, timeout=15)
+            if resp.status_code != 200:
+                raise RuntimeError(f"Erro na API da Anthropic (Status {resp.status_code}): {resp.text}")
+            return resp.json()["content"][0]["text"]
 
-    client = get_openai_client()
-    messages = []
-    if history:
-        messages.extend(history)
-    messages.append({"role": "user", "content": message})
+        # OpenAI, Gemini, OpenRouter, GitHub, Ollama
+        client = get_openai_client()
+        messages = []
+        if history:
+            messages.extend(history)
+        messages.append({"role": "user", "content": message})
 
-    model = OPENAI_MODEL
-    if LLM_PROVIDER == "gemini" and (not model or "gpt" in model):
-        model = "gemini-1.5-flash"
+        model = OPENAI_MODEL
+        if LLM_PROVIDER == "gemini" and (not model or "gpt" in model):
+            model = "gemini-1.5-flash"
+        elif LLM_PROVIDER == "github" and (not model or "gpt-3.5" in model):
+            model = "gpt-4o-mini"
 
-    resp = client.chat.completions.create(
-        model=model,
-        messages=messages,
-    )
-    return resp.choices[0].message.content
+        # Call OpenAI client with timeout configuration
+        resp = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            timeout=25.0
+        )
+        return resp.choices[0].message.content
+
+    except Exception as e:
+        # Categorize exception to give friendly hints to the user
+        err_msg = str(e)
+        if "api_key" in err_msg.lower() or "401" in err_msg or "authentication" in err_msg.lower():
+            raise RuntimeError(
+                f"Falha de Autenticação com o provedor {LLM_PROVIDER.upper()}.\n\n"
+                "**Por favor, verifique se a sua chave de API está correta e ativa.** "
+                "Você pode reconfigurar clicando no botão **⚡ Conectar** no topo do chat."
+            )
+        elif "rate_limit" in err_msg.lower() or "429" in err_msg or "quota" in err_msg.lower():
+            raise RuntimeError(
+                f"Limite de requisições excedido ou cota esgotada no provedor {LLM_PROVIDER.upper()}.\n\n"
+                "Por favor, aguarde alguns minutos ou mude de provedor na barra lateral."
+            )
+        elif "timeout" in err_msg.lower() or "connection" in err_msg.lower():
+            raise RuntimeError(
+                f"Tempo limite de conexão esgotado ao contatar o provedor {LLM_PROVIDER.upper()}.\n\n"
+                "Verifique sua conexão de rede ou se o serviço do provedor (como Ollama local) está ativo."
+            )
+        else:
+            raise RuntimeError(f"Erro inesperado no provedor {LLM_PROVIDER.upper()}: {err_msg}")
 
 
 def _call_demo(message):
