@@ -113,6 +113,10 @@ function setupWebviewMessageListener(webview, activeWebviews) {
     });
 }
 
+let restartAttempts = 0;
+const MAX_RESTART_ATTEMPTS = 3;
+let restartTimeoutId = null;
+
 function startFlaskServer(context) {
     const extensionPath = context.extensionPath;
     const scriptPath = path.join(extensionPath, 'app.py');
@@ -149,15 +153,50 @@ function startFlaskServer(context) {
 
     flaskProcess.on('close', (code) => {
         outputChannel.appendLine(`Flask process exited with code ${code}`);
+        flaskProcess = null;
+        
+        // Auto-restart logic if exited unexpectedly (non-zero or null signal)
+        if (code !== 0 && code !== null) {
+            if (restartAttempts < MAX_RESTART_ATTEMPTS) {
+                restartAttempts++;
+                const delay = restartAttempts * 2000;
+                outputChannel.appendLine(`[Self-Healing] Flask server crashed. Re-spawning in ${delay}ms (Attempt ${restartAttempts}/${MAX_RESTART_ATTEMPTS})...`);
+                
+                if (restartTimeoutId) {
+                    clearTimeout(restartTimeoutId);
+                }
+                restartTimeoutId = setTimeout(() => {
+                    startFlaskServer(context);
+                }, delay);
+            } else {
+                outputChannel.appendLine(`[Self-Healing] Maximum crash restart attempts reached (${MAX_RESTART_ATTEMPTS}). Will not restart automatically.`);
+                vscode.window.showErrorMessage(
+                    "O servidor local do Token Slim caiu repetidamente. Por favor, verifique os logs.",
+                    "Mostrar Logs"
+                ).then(selection => {
+                    if (selection === "Mostrar Logs") {
+                        outputChannel.show();
+                    }
+                });
+            }
+        } else {
+            // Clean shutdown, reset counter
+            restartAttempts = 0;
+        }
     });
 }
 
 function stopFlaskServer() {
+    if (restartTimeoutId) {
+        clearTimeout(restartTimeoutId);
+        restartTimeoutId = null;
+    }
     if (flaskProcess) {
         outputChannel.appendLine("Stopping Flask server process...");
         flaskProcess.kill();
         flaskProcess = null;
     }
+    restartAttempts = 0;
 }
 
 class TokenSlimWebviewProvider {
