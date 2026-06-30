@@ -18,3 +18,7 @@ Thumbs.db
 
 # IDE (keep .vscode/launch.json, mcp.json, settings.json)
 *.vsix
+
+# Databases
+*.db
+token_slim.db

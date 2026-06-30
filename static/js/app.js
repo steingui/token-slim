@@ -387,11 +387,18 @@ async function updateStats() {
   } catch (_) { /* ignore */ }
 }
 
-// ── Clear cache ────────────────────────────────────────
+// ── Clear cache & history ──────────────────────────────
 async function clearCache() {
   try {
     await fetch('http://127.0.0.1:5000/api/clear-cache', { method: 'POST' });
+    await fetch('http://127.0.0.1:5000/api/clear-history', { method: 'POST' });
     updateStats();
+    
+    // Clear chat UI and show welcome screen
+    $messages.innerHTML = '';
+    if ($welcome) {
+      $welcome.style.display = 'block';
+    }
   } catch (_) { /* ignore */ }
 }
 
@@ -558,6 +565,24 @@ function saveConfiguration() {
   }, 1000);
 }
 
+// ── Load history ───────────────────────────────────────
+async function loadHistory() {
+  try {
+    const resp = await fetch('http://127.0.0.1:5000/api/history');
+    if (!resp.ok) return;
+    const history = await resp.json();
+    if (history && history.length > 0) {
+      if ($welcome) $welcome.style.display = 'none';
+      $messages.innerHTML = '';
+      history.forEach(msg => {
+        addMessage(msg.role, msg.content, msg.meta_tags || []);
+      });
+    }
+  } catch (err) {
+    console.error('Error loading history:', err);
+  }
+}
+
 async function checkBackendConnection() {
   try {
     const res = await fetch('http://127.0.0.1:5000/api/stats');
@@ -570,6 +595,7 @@ async function checkBackendConnection() {
         $sendBtn.removeAttribute('disabled');
         $input.placeholder = 'Digite sua mensagem...';
         updateStats();
+        loadHistory();
       }
     } else {
       throw new Error();

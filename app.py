@@ -12,6 +12,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Monkey patch for transformers 5.x compatibility with gptcache
+try:
+    import transformers
+    if not hasattr(transformers.PreTrainedTokenizerBase, "encode_plus"):
+        def encode_plus(self, *args, **kwargs):
+            res = self(*args, **kwargs)
+            if "token_type_ids" not in res:
+                res.data["token_type_ids"] = [0] * len(res["input_ids"])
+            return res
+        transformers.PreTrainedTokenizerBase.encode_plus = encode_plus
+except ImportError:
+    pass
+
 # ============================================================
 # Sentry Error Monitoring (Tier 2)
 # ============================================================
@@ -304,6 +317,22 @@ def _call_demo(message):
         )
 
 
+def save_message_to_history(role, content, meta_tags=None, db_path="token_slim.db"):
+    try:
+        import sqlite3
+        import json
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO chat_history (role, content, meta_tags, timestamp) VALUES (?, ?, ?, ?)",
+            (role, content, json.dumps(meta_tags) if meta_tags else None, time.time())
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[db] save_message_to_history failed: {e}")
+
+
 # ============================================================
 # Routes
 # ============================================================
@@ -411,7 +440,74 @@ def chat():
         saved = result["original_tokens"] - result["compressed_tokens"]
         stats["estimated_cost_saved"] += saved * 0.00003
 
+    # Save user message and assistant message to history
+    if result["source"] != "error":
+        save_message_to_history("user", message)
+        
+        # Build meta tags array matching frontend format
+        meta_tags = []
+        if result.get("original_tokens") != result.get("compressed_tokens") and result.get("compressed_tokens", 0) > 0:
+            meta_tags.append({
+                "cls": "compression",
+                "text": f"🗜️ {result['original_tokens']} → {result['compressed_tokens']} tokens ({result['compression_ratio']})"
+            })
+        if result.get("cache_hit"):
+            meta_tags.append({
+                "cls": "cache-hit",
+                "text": f"⚡ CACHE ({round(result['cache_similarity'] * 100)}% similar)"
+            })
+        elif result.get("source") != "error":
+            meta_tags.append({
+                "cls": "cache-miss",
+                "text": f"🌐 {result['source'].upper()}"
+            })
+        meta_tags.append({
+            "cls": "time",
+            "text": f"⏱️ {result['response_time_ms']}ms"
+        })
+        
+        save_message_to_history("assistant", result["response"], meta_tags)
+
     return jsonify(result)
+
+
+@app.route("/api/history", methods=["GET"])
+def get_history():
+    try:
+        import sqlite3
+        import json
+        conn = sqlite3.connect("token_slim.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT role, content, meta_tags FROM chat_history ORDER BY id ASC")
+        rows = cursor.fetchall()
+        conn.close()
+        
+        history = []
+        for row in rows:
+            role, content, meta_tags_json = row
+            meta_tags = json.loads(meta_tags_json) if meta_tags_json else []
+            history.append({
+                "role": role,
+                "content": content,
+                "meta_tags": meta_tags
+            })
+        return jsonify(history)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/clear-history", methods=["POST"])
+def clear_history():
+    try:
+        import sqlite3
+        conn = sqlite3.connect("token_slim.db")
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM chat_history")
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "success", "message": "Histórico limpo com sucesso."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/stats")
@@ -865,9 +961,31 @@ def github_mock_auth():
 # ============================================================
 # Entry point
 # ============================================================
+def init_db(db_path="token_slim.db"):
+    try:
+        import sqlite3
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                role TEXT,
+                content TEXT,
+                meta_tags TEXT,
+                timestamp REAL
+            )
+        """)
+        conn.commit()
+        conn.close()
+        print("[db] Database and chat_history table initialized.")
+    except Exception as e:
+        print(f"[db] Database initialization failed: {e}")
+
+
 if __name__ == "__main__":
     print(f"\n🗜️  Token Slim")
     print(f"   Provider: {LLM_PROVIDER}")
     print(f"   Model:    {OPENAI_MODEL}")
     print(f"   URL:      http://127.0.0.1:5000\n")
+    init_db()
     app.run(debug=True, host='127.0.0.1', port=5000)
