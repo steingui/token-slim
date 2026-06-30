@@ -1,6 +1,17 @@
+# Core
 flask
 python-dotenv
+
+# LLM Providers
+openai
+
+# Optimization
 llmlingua
 gptcache
-openai
 numpy
+
+# Monitoring (Tier 2)
+sentry-sdk[flask]
+
+# MCP Server (Tier 3)
+fastmcp

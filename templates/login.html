@@ -264,6 +264,10 @@
                     <span class="provider-btn-icon">🚀</span>
                     <span class="provider-btn-name">OpenRouter</span>
                 </div>
+                <div class="provider-btn" data-provider="github">
+                    <span class="provider-btn-icon">🐙</span>
+                    <span class="provider-btn-name">GitHub</span>
+                </div>
                 <div class="provider-btn" data-provider="ollama">
                     <span class="provider-btn-icon">🦙</span>
                     <span class="provider-btn-name">Ollama</span>
@@ -314,6 +318,23 @@
                 <div class="hint-text">
                     <span>Acesso a Claude, Gemini e outros.</span>
                     <a href="https://openrouter.ai/keys" target="_blank">Obter Chave Manual ↗</a>
+                </div>
+            </div>
+
+            <!-- GitHub Form Group -->
+            <div class="form-group" id="group-github">
+                <div style="margin-bottom: 15px; padding: 12px; border-radius: var(--radius-md); background: rgba(99, 102, 241, 0.1); border: 1px dashed rgba(99, 102, 241, 0.3); text-align: center;">
+                    <p style="margin: 0 0 10px 0; font-size: 13px; color: var(--text-secondary);">Conexão com 1-clique via GitHub Models:</p>
+                    <a href="/api/github/auth-init" style="display: inline-block; padding: 10px 20px; background: var(--gradient-primary); color: white; text-decoration: none; border-radius: var(--radius-md); font-size: 13px; font-weight: 600; box-shadow: 0 2px 10px rgba(99, 102, 241, 0.2); transition: var(--transition);">⚡ Entrar com GitHub</a>
+                </div>
+                
+                <div style="text-align: center; color: var(--text-muted); font-size: 11px; margin: 15px 0;">— OU INSIRA MANUALMENTE —</div>
+
+                <label for="github-key">GitHub Personal Access Token (PAT):</label>
+                <input type="password" id="github-key" placeholder="ghp_..." />
+                <div class="hint-text">
+                    <span>Acesso aos modelos grátis do GitHub.</span>
+                    <a href="https://github.com/settings/tokens" target="_blank">Obter Token Manual ↗</a>
                 </div>
             </div>
 
@@ -391,6 +412,14 @@
                 model = 'meta-llama/llama-3-8b-instruct:free';
                 if (!token) {
                     alert('Por favor, insira sua Chave de API OpenRouter ou use o botão de Login 1-Clique.');
+                    return;
+                }
+            } else if (currentProvider === 'github') {
+                token = document.getElementById('github-key').value.trim();
+                baseUrl = 'https://models.github.ai';
+                model = 'gpt-4o-mini';
+                if (!token) {
+                    alert('Por favor, insira seu GitHub Token (PAT) ou use o botão de Login 1-Clique.');
                     return;
                 }
             } else if (currentProvider === 'ollama') {

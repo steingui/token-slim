@@ -91,6 +91,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!$modelInput.value || $modelInput.value.includes('gpt-') || $modelInput.value.includes('llama2')) {
           $modelInput.value = 'meta-llama/llama-3-8b-instruct:free';
         }
+      } else if (provider === 'github') {
+        $baseUrlInput.value = 'https://models.github.ai';
+        if (!$modelInput.value || $modelInput.value.includes('gpt-3.5') || $modelInput.value.includes('llama')) {
+          $modelInput.value = 'gpt-4o-mini';
+        }
       }
       
       // Reset connection status message on provider change
@@ -490,6 +495,17 @@ function updateFormVisibility(provider) {
     if (apiKeyHint) apiKeyHint.textContent = 'Adquira sua chave no aistudio.google.com';
     if (!$modelInput.value || !$modelInput.value.includes('gemini')) {
       $modelInput.value = 'gemini-1.5-flash';
+    }
+  } else if (provider === 'github') {
+    $apiKeyField.style.display = 'block';
+    $baseUrlField.style.display = 'block';
+    $modelField.style.display = 'block';
+    if (apiKeyHint) apiKeyHint.textContent = 'Crie seu token em github.com/settings/tokens';
+    if (!$baseUrlInput.value || $baseUrlInput.value.includes('api.openai.com') || $baseUrlInput.value.includes('11434')) {
+      $baseUrlInput.value = 'https://models.github.ai';
+    }
+    if (!$modelInput.value || !$modelInput.value.includes('gpt-')) {
+      $modelInput.value = 'gpt-4o-mini';
     }
   } else {
     // openai / custom

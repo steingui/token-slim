@@ -51,7 +51,8 @@
             "anthropic",
             "gemini",
             "openrouter",
-            "ollama"
+            "ollama",
+            "github"
           ],
           "description": "Qual LLM provider usar para o chat."
         },

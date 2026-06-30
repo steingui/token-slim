@@ -12,6 +12,23 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# ============================================================
+# Sentry Error Monitoring (Tier 2)
+# ============================================================
+_sentry_dsn = os.getenv("SENTRY_DSN", "")
+if _sentry_dsn:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.flask import FlaskIntegration
+        sentry_sdk.init(
+            dsn=_sentry_dsn,
+            integrations=[FlaskIntegration()],
+            traces_sample_rate=float(os.getenv("SENTRY_TRACES_RATE", "0.3")),
+        )
+        print("[sentry] Monitoring enabled")
+    except ImportError:
+        print("[sentry] sentry-sdk not installed, skipping")
+
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "token-slim-default-secret-key-12345")
 
@@ -543,6 +560,257 @@ def openrouter_callback():
         """
     except Exception as e:
         return f"Erro na requisição: {str(e)}", 500
+
+
+# ============================================================
+# GitHub OAuth & Mock Sign-on (Tier 3)
+# ============================================================
+@app.route("/api/github/auth-init")
+def github_auth_init():
+    client_id = os.getenv("GITHUB_CLIENT_ID", "")
+    if not client_id:
+        # Fallback to the interactive mock page if credentials aren't set up yet
+        return redirect("/api/github/mock-auth")
+    
+    redirect_uri = "http://127.0.0.1:5000/api/github/callback"
+    auth_url = f"https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri={redirect_uri}&scope=read:user"
+    return redirect(auth_url)
+
+
+@app.route("/api/github/callback")
+def github_callback():
+    code = request.args.get("code")
+    if not code:
+        return "Erro: Código de autorização não fornecido.", 400
+        
+    client_id = os.getenv("GITHUB_CLIENT_ID", "")
+    client_secret = os.getenv("GITHUB_CLIENT_SECRET", "")
+    redirect_uri = "http://127.0.0.1:5000/api/github/callback"
+    
+    try:
+        import requests
+        resp = requests.post(
+            "https://github.com/login/oauth/access_token",
+            headers={"Accept": "application/json"},
+            data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "code": code,
+                "redirect_uri": redirect_uri
+            }
+        )
+        resp_data = resp.json()
+        access_token = resp_data.get("access_token")
+        
+        if not access_token:
+            return f"Erro ao gerar access token: {resp_data}", 400
+            
+        redirect_url = f"vscode://steingui.token-slim/auth?provider=github&token={access_token}&baseUrl=https://models.github.ai&model=gpt-4o-mini"
+        
+        return f"""
+        <html>
+            <head>
+                <title>Conexão Concluída</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+                <style>
+                    body {{
+                        font-family: 'Outfit', sans-serif;
+                        text-align: center;
+                        padding: 50px;
+                        background: #0b0f19;
+                        color: #f3f4f6;
+                    }}
+                    .card {{
+                        background: #111827;
+                        border: 1px solid rgba(255, 255, 255, 0.08);
+                        border-radius: 12px;
+                        padding: 40px;
+                        max-width: 480px;
+                        margin: 0 auto;
+                        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                    }}
+                    .icon {{
+                        font-size: 48px;
+                        margin-bottom: 20px;
+                    }}
+                    h1 {{
+                        font-size: 24px;
+                        color: #6366f1;
+                        margin-bottom: 10px;
+                    }}
+                    p {{
+                        color: #9ca3af;
+                        margin-bottom: 30px;
+                    }}
+                    .btn {{
+                        display: inline-block;
+                        padding: 12px 24px;
+                        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        transition: all 0.25s;
+                    }}
+                    .btn:hover {{
+                        transform: translateY(-2px);
+                        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <div class="icon">🐙</div>
+                    <h1>Conexão Concluída!</h1>
+                    <p>O GitHub autorizou com sucesso e gerou sua chave para o VSCode.</p>
+                    <a href="{redirect_url}" class="btn">Abrir VSCode e Sincronizar</a>
+                </div>
+                <script>
+                    window.location.href = "{redirect_url}";
+                </script>
+            </body>
+        </html>
+        """
+    except Exception as e:
+        return f"Erro na autenticação com o GitHub: {str(e)}", 500
+
+
+@app.route("/api/github/mock-auth")
+def github_mock_auth():
+    redirect_url = f"vscode://steingui.token-slim/auth?provider=github&token=mock-token-github-12345678&baseUrl=https://models.github.ai&model=gpt-4o-mini"
+    return f"""
+    <html>
+        <head>
+            <title>Configurar Sign-on GitHub</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+            <style>
+                body {{
+                    font-family: 'Outfit', sans-serif;
+                    padding: 40px 20px;
+                    background: #0b0f19;
+                    color: #f3f4f6;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    margin: 0;
+                }}
+                .card {{
+                    background: #111827;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    border-radius: 16px;
+                    padding: 35px;
+                    max-width: 550px;
+                    width: 100%;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                    position: relative;
+                }}
+                .badge {{
+                    position: absolute;
+                    top: 15px;
+                    right: 15px;
+                    background: rgba(99, 102, 241, 0.15);
+                    color: #6366f1;
+                    border: 1px solid rgba(99, 102, 241, 0.3);
+                    padding: 4px 10px;
+                    border-radius: 20px;
+                    font-size: 11px;
+                    font-weight: 600;
+                }}
+                .icon {{
+                    font-size: 52px;
+                    margin-bottom: 15px;
+                }}
+                h1 {{
+                    font-size: 22px;
+                    color: #f3f4f6;
+                    margin-top: 0;
+                    margin-bottom: 10px;
+                }}
+                p {{
+                    color: #9ca3af;
+                    font-size: 14px;
+                    line-height: 1.6;
+                    margin-bottom: 20px;
+                }}
+                .instructions {{
+                    background: #1f2937;
+                    border-radius: 8px;
+                    padding: 15px;
+                    text-align: left;
+                    margin-bottom: 25px;
+                    font-size: 13px;
+                }}
+                .instructions code {{
+                    background: #111827;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    color: #a855f7;
+                }}
+                .actions {{
+                    display: flex;
+                    gap: 12px;
+                }}
+                .btn {{
+                    flex: 1;
+                    padding: 12px;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    text-decoration: none;
+                    text-align: center;
+                    font-size: 14px;
+                    transition: all 0.25s;
+                    cursor: pointer;
+                    border: none;
+                }}
+                .btn-primary {{
+                    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+                    color: white;
+                }}
+                .btn-primary:hover {{
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+                }}
+                .btn-secondary {{
+                    background: #374151;
+                    color: #d1d5db;
+                }}
+                .btn-secondary:hover {{
+                    background: #4b5563;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <span class="badge">MVP / Desenvolvimento</span>
+                <div class="icon">🐙</div>
+                <h1>Configurar Login do GitHub</h1>
+                <p>
+                    Para usar o login real do GitHub com 1-clique no seu ambiente, você precisa criar um OAuth App no GitHub e adicioná-lo ao seu arquivo <code>.env</code>.
+                </p>
+                <div class="instructions">
+                    <strong>Como configurar em 30 segundos:</strong>
+                    <ol style="margin: 8px 0 0 0; padding-left: 20px;">
+                        <li>Vá em <code>GitHub -> Settings -> Developer Settings -> OAuth Apps -> New OAuth App</code></li>
+                        <li>Defina a Homepage URL como <code>http://127.0.0.1:5000</code></li>
+                        <li>Defina a Authorization Callback URL como <code>http://127.0.0.1:5000/api/github/callback</code></li>
+                        <li>Copie o Client ID e Client Secret gerados e adicione no seu <code>.env</code>:
+                            <pre style="margin-top: 8px; padding: 8px; background: #111827; border-radius: 4px; overflow-x: auto; color: #10b981;">GITHUB_CLIENT_ID="seu_client_id"<br>GITHUB_CLIENT_SECRET="seu_client_secret"</pre>
+                        </li>
+                    </ol>
+                </div>
+                <div class="actions">
+                    <a href="https://github.com/settings/developers" target="_blank" class="btn btn-secondary">Registrar App no GitHub ↗</a>
+                    <a href="{redirect_url}" class="btn btn-primary">Simular Login no VSCode (Mock)</a>
+                </div>
+            </div>
+        </body>
+    </html>
+    """
 
 
 

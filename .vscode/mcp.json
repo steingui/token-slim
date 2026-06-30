@@ -1,0 +1,42 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y", "@modelcontextprotocol/server-filesystem",
+        "/home/gui/token-slim"
+      ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "sentry": {
+      "command": "npx",
+      "args": ["-y", "@sentry/mcp-server@latest"],
+      "env": {
+        "SENTRY_AUTH_TOKEN": "${input:sentryToken}"
+      }
+    },
+    "token-slim-mcp": {
+      "command": "python3",
+      "args": ["/home/gui/token-slim/mcp_server.py"]
+    }
+  },
+  "inputs": [
+    {
+      "id": "sentryToken",
+      "type": "promptString",
+      "description": "Sentry Auth Token (obtenha em sentry.io/settings/auth-tokens/)",
+      "password": true
+    }
+  ]
+}
