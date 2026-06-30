@@ -7,12 +7,13 @@ import os
 import time
 import hashlib
 import numpy as np
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "token-slim-default-secret-key-12345")
 
 # ============================================================
 # Configuration
@@ -139,9 +140,12 @@ def get_openai_client():
     global _openai_client
     if _openai_client is None:
         from openai import OpenAI
+        base_url = OPENAI_BASE_URL
+        if LLM_PROVIDER == "gemini" and (not base_url or "api.openai.com" in base_url):
+            base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
         _openai_client = OpenAI(
             api_key=OPENAI_API_KEY or "demo",
-            base_url=OPENAI_BASE_URL,
+            base_url=base_url or "https://api.openai.com/v1",
         )
     return _openai_client
 
@@ -151,14 +155,35 @@ def call_llm(message, history=None):
     if LLM_PROVIDER == "demo":
         return _call_demo(message)
 
+    if LLM_PROVIDER == "anthropic":
+        import requests
+        headers = {
+            "x-api-key": OPENAI_API_KEY,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+        }
+        data = {
+            "model": OPENAI_MODEL or "claude-3-5-sonnet-20240620",
+            "max_tokens": 1024,
+            "messages": [{"role": "user", "content": message}]
+        }
+        resp = requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=data)
+        if resp.status_code != 200:
+            raise Exception(f"Anthropic API Error ({resp.status_code}): {resp.text}")
+        return resp.json()["content"][0]["text"]
+
     client = get_openai_client()
     messages = []
     if history:
         messages.extend(history)
     messages.append({"role": "user", "content": message})
 
+    model = OPENAI_MODEL
+    if LLM_PROVIDER == "gemini" and (not model or "gpt" in model):
+        model = "gemini-1.5-flash"
+
     resp = client.chat.completions.create(
-        model=OPENAI_MODEL,
+        model=model,
         messages=messages,
     )
     return resp.choices[0].message.content
@@ -367,14 +392,44 @@ def test_connection():
     data = request.get_json()
     provider = data.get("provider", "demo")
     api_key = data.get("openaiApiKey", "")
-    base_url = data.get("openaiBaseUrl", "https://api.openai.com/v1")
-    model = data.get("openaiModel", "gpt-3.5-turbo")
+    base_url = data.get("openaiBaseUrl", "")
+    model = data.get("openaiModel", "")
 
     if provider == "demo":
         return jsonify({"success": True, "message": "Modo de demonstração funcionando!"})
 
+    if provider == "anthropic":
+        try:
+            import requests
+            headers = {
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json"
+            }
+            payload = {
+                "model": model or "claude-3-5-sonnet-20240620",
+                "max_tokens": 1,
+                "messages": [{"role": "user", "content": "ping"}]
+            }
+            resp = requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload)
+            if resp.status_code == 200:
+                return jsonify({"success": True, "message": "Conexão com Anthropic estabelecida!"})
+            else:
+                return jsonify({"success": False, "error": f"Erro {resp.status_code}: {resp.text}"})
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)})
+
     try:
         from openai import OpenAI
+        if provider == "gemini" and (not base_url or "api.openai.com" in base_url):
+            base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        if provider == "gemini" and (not model or "gpt" in model):
+            model = "gemini-1.5-flash"
+        if not base_url:
+            base_url = "https://api.openai.com/v1"
+        if not model:
+            model = "gpt-3.5-turbo"
+
         client = OpenAI(
             api_key=api_key or "demo",
             base_url=base_url,
@@ -383,7 +438,7 @@ def test_connection():
             # For Ollama, we can list models to check if the Ollama service is running/responsive
             client.models.list()
         else:
-            # For OpenAI/OpenRouter/Custom, try a quick 1-token request
+            # For OpenAI/OpenRouter/Custom/Gemini, try a quick 1-token request
             client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": "ping"}],
@@ -392,6 +447,102 @@ def test_connection():
         return jsonify({"success": True, "message": "Conexão estabelecida com sucesso!"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
+
+
+@app.route("/api/openrouter/auth-init")
+def openrouter_auth_init():
+    callback = "http://127.0.0.1:5000/api/openrouter/callback"
+    auth_url = f"https://openrouter.ai/auth?callback_url={callback}"
+    return redirect(auth_url)
+
+
+@app.route("/api/openrouter/callback")
+def openrouter_callback():
+    code = request.args.get("code")
+    if not code:
+        return "Erro: Código de autorização não fornecido.", 400
+    
+    try:
+        import requests
+        resp = requests.post(
+            "https://openrouter.ai/api/v1/auth/keys",
+            json={"code": code}
+        )
+        resp_data = resp.json()
+        api_key = resp_data.get("key")
+        if not api_key:
+            return f"Erro ao gerar chave: {resp_data}", 400
+        
+        redirect_url = f"vscode://steingui.token-slim/auth?provider=openrouter&token={api_key}&baseUrl=https://openrouter.ai/api/v1&model=meta-llama/llama-3-8b-instruct:free"
+        
+        return f"""
+        <html>
+            <head>
+                <title>Conexão Concluída</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+                <style>
+                    body {{
+                        font-family: 'Outfit', sans-serif;
+                        text-align: center;
+                        padding: 50px;
+                        background: #0b0f19;
+                        color: #f3f4f6;
+                    }}
+                    .card {{
+                        background: #111827;
+                        border: 1px solid rgba(255, 255, 255, 0.08);
+                        border-radius: 12px;
+                        padding: 40px;
+                        max-width: 480px;
+                        margin: 0 auto;
+                        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                    }}
+                    .icon {{
+                        font-size: 48px;
+                        margin-bottom: 20px;
+                    }}
+                    h1 {{
+                        font-size: 24px;
+                        color: #6366f1;
+                        margin-bottom: 10px;
+                    }}
+                    p {{
+                        color: #9ca3af;
+                        margin-bottom: 30px;
+                    }}
+                    .btn {{
+                        display: inline-block;
+                        padding: 12px 24px;
+                        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        transition: all 0.25s;
+                    }}
+                    .btn:hover {{
+                        transform: translateY(-2px);
+                        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <div class="icon">🔐</div>
+                    <h1>Conexão Concluída!</h1>
+                    <p>O OpenRouter gerou sua chave e ela foi enviada para o VSCode.</p>
+                    <a href="{redirect_url}" class="btn">Abrir VSCode e Sincronizar</a>
+                </div>
+                <script>
+                    window.location.href = "{redirect_url}";
+                </script>
+            </body>
+        </html>
+        """
+    except Exception as e:
+        return f"Erro na requisição: {str(e)}", 500
 
 
 

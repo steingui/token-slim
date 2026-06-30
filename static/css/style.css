@@ -784,8 +784,8 @@ input[type="range"]::-webkit-slider-thumb {
 /* ── Provider grid selection ── */
 .provider-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
   margin-bottom: 15px;
 }
 
@@ -793,7 +793,7 @@ input[type="range"]::-webkit-slider-thumb {
   background: var(--bg-tertiary);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 12px 10px;
+  padding: 10px 4px;
   cursor: pointer;
   text-align: center;
   transition: var(--transition);

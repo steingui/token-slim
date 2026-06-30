@@ -103,7 +103,7 @@
     <main class="main">
       <div class="chat-header">
         <span class="chat-title">Nova conversa</span>
-        <span class="status-indicator loading" id="status-badge">⏳ Conectando...</span>
+        <span class="status-indicator loading clickable" id="status-badge" style="cursor: pointer;" onclick="openQuickConnect()" title="Clique para conectar/autenticar seu provider">⚡ Conectar</span>
       </div>
 
       <div class="chat-messages" id="chat-messages">
@@ -136,15 +136,25 @@
                 <div class="provider-name">OpenAI</div>
                 <div class="provider-desc">gpt-4o, gpt-3.5...</div>
               </div>
-              <div class="provider-card" data-provider="ollama">
-                <div class="provider-icon">🦙</div>
-                <div class="provider-name">Ollama</div>
-                <div class="provider-desc">Modelos locais</div>
+              <div class="provider-card" data-provider="anthropic">
+                <div class="provider-icon">🦉</div>
+                <div class="provider-name">Anthropic</div>
+                <div class="provider-desc">Claude 3.5...</div>
+              </div>
+              <div class="provider-card" data-provider="gemini">
+                <div class="provider-icon">♊</div>
+                <div class="provider-name">Gemini</div>
+                <div class="provider-desc">Gemini 1.5...</div>
               </div>
               <div class="provider-card" data-provider="openrouter">
                 <div class="provider-icon">🚀</div>
                 <div class="provider-name">OpenRouter</div>
-                <div class="provider-desc">Claude, Gemini...</div>
+                <div class="provider-desc">1-Clique / Claude...</div>
+              </div>
+              <div class="provider-card" data-provider="ollama">
+                <div class="provider-icon">🦙</div>
+                <div class="provider-name">Ollama</div>
+                <div class="provider-desc">Modelos locais</div>
               </div>
             </div>
 

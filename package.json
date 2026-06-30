@@ -48,6 +48,9 @@
           "enum": [
             "demo",
             "openai",
+            "anthropic",
+            "gemini",
+            "openrouter",
             "ollama"
           ],
           "description": "Qual LLM provider usar para o chat."

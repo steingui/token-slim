@@ -103,8 +103,8 @@
 
         .provider-select-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
             margin-bottom: 24px;
         }
 
@@ -112,12 +112,12 @@
             background: var(--bg-tertiary);
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-md);
-            padding: 16px 8px;
+            padding: 12px 4px;
             cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             transition: var(--transition);
         }
 
@@ -133,11 +133,11 @@
         }
 
         .provider-btn-icon {
-            font-size: 24px;
+            font-size: 20px;
         }
 
         .provider-btn-name {
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 600;
         }
 
@@ -252,6 +252,14 @@
                     <span class="provider-btn-icon">🧠</span>
                     <span class="provider-btn-name">OpenAI</span>
                 </div>
+                <div class="provider-btn" data-provider="anthropic">
+                    <span class="provider-btn-icon">🦉</span>
+                    <span class="provider-btn-name">Anthropic</span>
+                </div>
+                <div class="provider-btn" data-provider="gemini">
+                    <span class="provider-btn-icon">♊</span>
+                    <span class="provider-btn-name">Gemini</span>
+                </div>
                 <div class="provider-btn" data-provider="openrouter">
                     <span class="provider-btn-icon">🚀</span>
                     <span class="provider-btn-name">OpenRouter</span>
@@ -272,13 +280,40 @@
                 </div>
             </div>
 
+            <!-- Anthropic Form Group -->
+            <div class="form-group" id="group-anthropic">
+                <label for="anthropic-key">Chave de API Anthropic:</label>
+                <input type="password" id="anthropic-key" placeholder="sk-ant-..." />
+                <div class="hint-text">
+                    <span>Sua chave é armazenada localmente.</span>
+                    <a href="https://console.anthropic.com/settings/keys" target="_blank">Obter Chave ↗</a>
+                </div>
+            </div>
+
+            <!-- Gemini Form Group -->
+            <div class="form-group" id="group-gemini">
+                <label for="gemini-key">Chave de API Gemini:</label>
+                <input type="password" id="gemini-key" placeholder="AIzaSy..." />
+                <div class="hint-text">
+                    <span>Sua chave é armazenada localmente.</span>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank">Obter Chave ↗</a>
+                </div>
+            </div>
+
             <!-- OpenRouter Form Group -->
             <div class="form-group" id="group-openrouter">
+                <div style="margin-bottom: 15px; padding: 12px; border-radius: var(--radius-md); background: rgba(99, 102, 241, 0.1); border: 1px dashed rgba(99, 102, 241, 0.3); text-align: center;">
+                    <p style="margin: 0 0 10px 0; font-size: 13px; color: var(--text-secondary);">Recomendamos a conexão com 1-clique:</p>
+                    <a href="/api/openrouter/auth-init" style="display: inline-block; padding: 10px 20px; background: var(--gradient-primary); color: white; text-decoration: none; border-radius: var(--radius-md); font-size: 13px; font-weight: 600; box-shadow: 0 2px 10px rgba(99, 102, 241, 0.2); transition: var(--transition);">⚡ Entrar com OpenRouter</a>
+                </div>
+                
+                <div style="text-align: center; color: var(--text-muted); font-size: 11px; margin: 15px 0;">— OU INSIRA MANUALMENTE —</div>
+
                 <label for="openrouter-key">Chave de API OpenRouter:</label>
                 <input type="password" id="openrouter-key" placeholder="sk-or-..." />
                 <div class="hint-text">
                     <span>Acesso a Claude, Gemini e outros.</span>
-                    <a href="https://openrouter.ai/keys" target="_blank">Obter Chave ↗</a>
+                    <a href="https://openrouter.ai/keys" target="_blank">Obter Chave Manual ↗</a>
                 </div>
             </div>
 
@@ -334,12 +369,28 @@
                     alert('Por favor, insira sua Chave de API OpenAI.');
                     return;
                 }
+            } else if (currentProvider === 'anthropic') {
+                token = document.getElementById('anthropic-key').value.trim();
+                baseUrl = 'https://api.anthropic.com/v1';
+                model = 'claude-3-5-sonnet-20240620';
+                if (!token) {
+                    alert('Por favor, insira sua Chave de API Anthropic.');
+                    return;
+                }
+            } else if (currentProvider === 'gemini') {
+                token = document.getElementById('gemini-key').value.trim();
+                baseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/';
+                model = 'gemini-1.5-flash';
+                if (!token) {
+                    alert('Por favor, insira sua Chave de API Gemini.');
+                    return;
+                }
             } else if (currentProvider === 'openrouter') {
                 token = document.getElementById('openrouter-key').value.trim();
                 baseUrl = 'https://openrouter.ai/api/v1';
                 model = 'meta-llama/llama-3-8b-instruct:free';
                 if (!token) {
-                    alert('Por favor, insira sua Chave de API OpenRouter.');
+                    alert('Por favor, insira sua Chave de API OpenRouter ou use o botão de Login 1-Clique.');
                     return;
                 }
             } else if (currentProvider === 'ollama') {
@@ -349,7 +400,6 @@
             }
 
             // Build deeplink URI
-            // Schema for VSCode is vscode://<publisher>.<extension-name>/<route>
             const vscodeUri = `vscode://steingui.token-slim/auth?provider=${currentProvider}&token=${encodeURIComponent(token)}&baseUrl=${encodeURIComponent(baseUrl)}&model=${encodeURIComponent(model)}`;
             
             // Redirect to deeplink

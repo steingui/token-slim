@@ -96,6 +96,10 @@ function setupWebviewMessageListener(webview, activeWebviews) {
                 });
                 break;
             }
+            case 'openExternal': {
+                vscode.env.openExternal(vscode.Uri.parse(message.url));
+                break;
+            }
             case 'updateConfig': {
                 const config = vscode.workspace.getConfiguration('token-slim');
                 const data = message.data;

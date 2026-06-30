@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            provider: provider === 'openrouter' ? 'openai' : provider,
+            provider: provider,
             openaiApiKey: $apiKeyInput.value.trim(),
             openaiBaseUrl: $baseUrlInput.value.trim(),
             openaiModel: $modelInput.value.trim()
@@ -461,7 +461,7 @@ function updateFormVisibility(provider) {
     if (!$baseUrlInput.value || $baseUrlInput.value.includes('api.openai.com') || $baseUrlInput.value.includes('openrouter.ai')) {
       $baseUrlInput.value = 'http://localhost:11434';
     }
-    if (!$modelInput.value || $modelInput.value.includes('gpt-') || $modelInput.value.includes('llama-3-8b')) {
+    if (!$modelInput.value || $modelInput.value.includes('gpt-') || $modelInput.value.includes('llama-3-8b') || $modelInput.value.includes('claude') || $modelInput.value.includes('gemini')) {
       $modelInput.value = 'llama2';
     }
   } else if (provider === 'openrouter') {
@@ -472,8 +472,24 @@ function updateFormVisibility(provider) {
     if (!$baseUrlInput.value || $baseUrlInput.value.includes('api.openai.com') || $baseUrlInput.value.includes('11434')) {
       $baseUrlInput.value = 'https://openrouter.ai/api/v1';
     }
-    if (!$modelInput.value || $modelInput.value.includes('gpt-') || $modelInput.value.includes('llama2')) {
+    if (!$modelInput.value || $modelInput.value.includes('gpt-') || $modelInput.value.includes('llama2') || $modelInput.value.includes('claude') || $modelInput.value.includes('gemini')) {
       $modelInput.value = 'meta-llama/llama-3-8b-instruct:free';
+    }
+  } else if (provider === 'anthropic') {
+    $apiKeyField.style.display = 'block';
+    $baseUrlField.style.display = 'none';
+    $modelField.style.display = 'block';
+    if (apiKeyHint) apiKeyHint.textContent = 'Adquira sua chave no console.anthropic.com';
+    if (!$modelInput.value || !$modelInput.value.includes('claude')) {
+      $modelInput.value = 'claude-3-5-sonnet-20240620';
+    }
+  } else if (provider === 'gemini') {
+    $apiKeyField.style.display = 'block';
+    $baseUrlField.style.display = 'none';
+    $modelField.style.display = 'block';
+    if (apiKeyHint) apiKeyHint.textContent = 'Adquira sua chave no aistudio.google.com';
+    if (!$modelInput.value || !$modelInput.value.includes('gemini')) {
+      $modelInput.value = 'gemini-1.5-flash';
     }
   } else {
     // openai / custom
@@ -484,7 +500,7 @@ function updateFormVisibility(provider) {
     if (!$baseUrlInput.value || $baseUrlInput.value.includes('openrouter.ai') || $baseUrlInput.value.includes('11434')) {
       $baseUrlInput.value = 'https://api.openai.com/v1';
     }
-    if (!$modelInput.value || $modelInput.value.includes('llama') || $modelInput.value.includes('llama2')) {
+    if (!$modelInput.value || $modelInput.value.includes('llama') || $modelInput.value.includes('llama2') || $modelInput.value.includes('claude') || $modelInput.value.includes('gemini')) {
       $modelInput.value = 'gpt-3.5-turbo';
     }
   }
@@ -495,13 +511,13 @@ function saveConfiguration() {
   const provider = activeCard ? activeCard.dataset.provider : 'demo';
 
   const data = {
-    provider: provider === 'openrouter' ? 'openai' : provider,
+    provider: provider,
     openaiApiKey: $apiKeyInput.value.trim(),
     openaiBaseUrl: $baseUrlInput.value.trim(),
     openaiModel: $modelInput.value.trim()
   };
 
-  if (data.provider === 'openai' && !data.openaiApiKey) {
+  if (['openai', 'anthropic', 'gemini', 'openrouter'].includes(data.provider) && !data.openaiApiKey) {
     alert('Por favor, insira a chave de API para o provider selecionado.');
     return;
   }
@@ -533,7 +549,7 @@ async function checkBackendConnection() {
       if (!state.connected) {
         state.connected = true;
         $statusBadge.textContent = '🟢 Conectado';
-        $statusBadge.className = 'status-indicator connected';
+        $statusBadge.className = 'status-indicator connected clickable';
         $input.removeAttribute('disabled');
         $sendBtn.removeAttribute('disabled');
         $input.placeholder = 'Digite sua mensagem...';
@@ -544,11 +560,11 @@ async function checkBackendConnection() {
     }
   } catch (e) {
     state.connected = false;
-    $statusBadge.textContent = '⏳ Iniciando...';
-    $statusBadge.className = 'status-indicator loading';
+    $statusBadge.textContent = '⚡ Conectar';
+    $statusBadge.className = 'status-indicator loading clickable';
     $input.setAttribute('disabled', 'true');
     $sendBtn.setAttribute('disabled', 'true');
-    $input.placeholder = 'Iniciando otimizador. Por favor, aguarde...';
+    $input.placeholder = 'Servidor local offline. Clique em "Conectar" acima para iniciar.';
   }
 }
 
@@ -568,6 +584,17 @@ async function detectLocalOllama() {
     }
   } catch (e) {
     // Ollama not running local
+  }
+}
+
+function openQuickConnect() {
+  if (vscode) {
+    vscode.postMessage({
+      command: 'openExternal',
+      url: 'http://127.0.0.1:5000/login'
+    });
+  } else {
+    window.open('http://127.0.0.1:5000/login', '_blank');
   }
 }
 
