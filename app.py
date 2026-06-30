@@ -12,6 +12,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Monkey patch for transformers 5.x compatibility with gptcache
+try:
+    import transformers
+    if not hasattr(transformers.PreTrainedTokenizerBase, "encode_plus"):
+        def encode_plus(self, *args, **kwargs):
+            res = self(*args, **kwargs)
+            if "token_type_ids" not in res:
+                res.data["token_type_ids"] = [0] * len(res["input_ids"])
+            return res
+        transformers.PreTrainedTokenizerBase.encode_plus = encode_plus
+except ImportError:
+    pass
+
 # ============================================================
 # Sentry Error Monitoring (Tier 2)
 # ============================================================
@@ -112,23 +125,54 @@ def compress_prompt(text, rate=0.5):
 
 
 # ============================================================
-# Semantic Cache (lightweight, in-memory)
+# Semantic Cache (lightweight, SQLite persisted)
 # ============================================================
 class SemanticCache:
-    """Simple cosine-similarity cache using ONNX embeddings."""
+    """Simple cosine-similarity cache using ONNX embeddings with SQLite persistence."""
 
-    def __init__(self):
+    def __init__(self, db_path="token_slim.db"):
         self.entries = []
         self._onnx = None
         self._ready = False
+        self.db_path = db_path
 
     def init(self):
         if self._ready:
             return
         try:
+            import sqlite3
+            import pickle
             from gptcache.embedding import Onnx
             self._onnx = Onnx()
+            
+            # Setup database table
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS semantic_cache (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    query TEXT UNIQUE,
+                    response TEXT,
+                    embedding BLOB
+                )
+            """)
+            conn.commit()
+            
+            # Load entries
+            cursor.execute("SELECT query, response, embedding FROM semantic_cache")
+            rows = cursor.fetchall()
+            for row in rows:
+                query_val, response_val, emb_blob = row
+                emb = pickle.loads(emb_blob)
+                self.entries.append({
+                    "query": query_val,
+                    "emb": emb,
+                    "response": response_val
+                })
+            conn.close()
+            
             self._ready = True
+            print(f"[cache] Initialized with {len(self.entries)} persistent entries from SQLite.")
         except Exception as e:
             print(f"[cache] init failed: {e}")
 
@@ -151,11 +195,40 @@ class SemanticCache:
     def store(self, query, response):
         if not self._ready:
             return
-        emb = np.array(self._onnx.to_embeddings(query))
-        self.entries.append({"query": query, "emb": emb, "response": response})
+        try:
+            import sqlite3
+            import pickle
+            emb = np.array(self._onnx.to_embeddings(query))
+            
+            # Save to SQLite
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            emb_blob = pickle.dumps(emb)
+            cursor.execute(
+                "INSERT OR REPLACE INTO semantic_cache (query, response, embedding) VALUES (?, ?, ?)",
+                (query, response, emb_blob)
+            )
+            conn.commit()
+            conn.close()
+            
+            # Keep in-memory in sync
+            self.entries = [e for e in self.entries if e["query"] != query]
+            self.entries.append({"query": query, "emb": emb, "response": response})
+        except Exception as e:
+            print(f"[cache] store failed: {e}")
 
     def clear(self):
         self.entries.clear()
+        try:
+            import sqlite3
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM semantic_cache")
+            conn.commit()
+            conn.close()
+            print("[cache] Persistent cache cleared.")
+        except Exception as e:
+            print(f"[cache] clear failed: {e}")
 
     @property
     def size(self):
