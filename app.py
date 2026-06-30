@@ -20,12 +20,32 @@ if _sentry_dsn:
     try:
         import sentry_sdk
         from sentry_sdk.integrations.flask import FlaskIntegration
+        
+        def _strip_sensitive_data(event, hint):
+            """Remove sensitive keys, authorization headers, and tokens from Sentry events."""
+            # Scrub request headers
+            if "request" in event:
+                headers = event["request"].get("headers", {})
+                for key in list(headers.keys()):
+                    if key.lower() in ("authorization", "x-api-key", "cookie", "set-cookie"):
+                        headers[key] = "[SCRUBBED]"
+            
+            # Scrub request payloads or environment variables containing keys
+            if "extra" in event:
+                extra = event["extra"]
+                for key in list(extra.keys()):
+                    if "key" in key.lower() or "token" in key.lower() or "secret" in key.lower():
+                        extra[key] = "[SCRUBBED]"
+                        
+            return event
+
         sentry_sdk.init(
             dsn=_sentry_dsn,
             integrations=[FlaskIntegration()],
             traces_sample_rate=float(os.getenv("SENTRY_TRACES_RATE", "0.3")),
+            before_send=_strip_sensitive_data,
         )
-        print("[sentry] Monitoring enabled")
+        print("[sentry] Monitoring enabled with data scrubbing")
     except ImportError:
         print("[sentry] sentry-sdk not installed, skipping")
 
