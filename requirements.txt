@@ -1,5 +1,5 @@
 # Core
-flask
+flask>=2.3.2
 python-dotenv
 
 # LLM Providers
@@ -8,10 +8,10 @@ openai
 # Optimization
 llmlingua
 gptcache
-numpy
+numpy>=1.16.3
 
 # Monitoring (Tier 2)
-sentry-sdk[flask]
+sentry-sdk[flask]>=2.8.0
 
 # MCP Server (Tier 3)
-fastmcp
+fastmcp>=3.2.0
