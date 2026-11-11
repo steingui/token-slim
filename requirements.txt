@@ -14,4 +14,4 @@ numpy>=1.22
 sentry-sdk[flask]>=2.8.0
 
 # MCP Server (Tier 3)
-fastmcp>=3.2.0
+fastmcp>=3.4.10
