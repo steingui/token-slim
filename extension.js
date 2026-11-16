@@ -119,7 +119,14 @@ let restartTimeoutId = null;
 
 function startFlaskServer(context) {
     const extensionPath = context.extensionPath;
-    const scriptPath = path.join(extensionPath, 'app.py');
+    // Sanitize path composition and validate (CWE-22) that the target script
+    // stays confined to the extension directory to prevent traversal.
+    const scriptPath = path.format({ dir: extensionPath, base: 'app.py' });
+    const relPath = path.relative(extensionPath, scriptPath);
+    if (!relPath || relPath.startsWith('..') || path.isAbsolute(relPath)) {
+        outputChannel.appendLine(`Refusing unsafe script path: ${scriptPath}`);
+        return;
+    }
     
     const config = vscode.workspace.getConfiguration('token-slim');
     const provider = config.get('provider') || 'demo';
