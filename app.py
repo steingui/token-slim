@@ -1047,5 +1047,7 @@ if __name__ == "__main__":
     print(f"   Provider: {LLM_PROVIDER}")
     print(f"   Model:    {OPENAI_MODEL}")
     print(f"   URL:      http://127.0.0.1:5000\n")
+    import os
     init_db()
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    debug_mode = os.environ.get("FLASK_DEBUG", "").strip().lower() in ("1", "true", "yes")
+    app.run(debug=debug_mode, host='127.0.0.1', port=5000)
