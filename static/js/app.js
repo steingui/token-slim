@@ -274,7 +274,7 @@ async function sendMessage() {
   const typingEl = addTypingIndicator();
 
   try {
-    const resp = await fetch('http://127.0.0.1:5000/api/chat', {
+    const resp = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -383,7 +383,7 @@ function addTypingIndicator() {
 // ── Stats ──────────────────────────────────────────────
 async function updateStats() {
   try {
-    const resp = await fetch('http://127.0.0.1:5000/api/stats');
+    const resp = await fetch('/api/stats');
     const s = await resp.json();
 
     $statTokens.textContent = s.total_tokens_saved.toLocaleString();
