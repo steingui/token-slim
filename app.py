@@ -809,6 +809,9 @@ def github_callback():
         if not access_token:
             return f"Erro ao gerar access token: {resp_data}", 400
             
+        import html
+
+        access_token = html.escape(str(access_token))
         redirect_url = f"vscode://steingui.token-slim/auth?provider=github&token={access_token}&baseUrl=https://models.github.ai&model=gpt-4o-mini"
         
         return f"""
