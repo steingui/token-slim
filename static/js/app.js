@@ -174,10 +174,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Listen for config data back from VSCode
   window.addEventListener('message', event => {
     // Only accept messages from trusted VS Code webview origins
-    if (
-      event.origin !== window.location.origin &&
-      !event.origin.startsWith('vscode-webview:')
-    ) {
+    const isVscodeWebviewOrigin = /^vscode-webview:\/\/[\w.-]+$/.test(event.origin);
+    if (event.origin !== window.location.origin && !isVscodeWebviewOrigin) {
       return;
     }
     const message = event.data;

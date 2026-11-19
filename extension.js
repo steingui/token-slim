@@ -273,7 +273,7 @@ class TokenSlimUriHandler {
 }
 
 function getWebviewContent(webview, extensionUri) {
-    const htmlPath = path.join(extensionUri.fsPath, 'templates', 'index.html');
+    const htmlPath = vscode.Uri.joinPath(extensionUri, 'templates', 'index.html').fsPath;
     let html = fs.readFileSync(htmlPath, 'utf8');
 
     // Convert CSS path
