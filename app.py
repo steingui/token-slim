@@ -141,7 +141,7 @@ class SemanticCache:
             return
         try:
             import sqlite3
-            import pickle
+            import json
             from gptcache.embedding import Onnx
             self._onnx = Onnx()
             
@@ -163,7 +163,10 @@ class SemanticCache:
             rows = cursor.fetchall()
             for row in rows:
                 query_val, response_val, emb_blob = row
-                emb = pickle.loads(emb_blob)
+                try:
+                    emb = np.array(json.loads(emb_blob))
+                except (ValueError, TypeError):
+                    continue
                 self.entries.append({
                     "query": query_val,
                     "emb": emb,
@@ -197,13 +200,13 @@ class SemanticCache:
             return
         try:
             import sqlite3
-            import pickle
+            import json
             emb = np.array(self._onnx.to_embeddings(query))
             
             # Save to SQLite
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            emb_blob = pickle.dumps(emb)
+            emb_blob = json.dumps(emb.tolist())
             cursor.execute(
                 "INSERT OR REPLACE INTO semantic_cache (query, response, embedding) VALUES (?, ?, ?)",
                 (query, response, emb_blob)
