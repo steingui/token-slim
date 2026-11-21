@@ -389,7 +389,7 @@ function addTypingIndicator() {
 // ── Stats ──────────────────────────────────────────────
 async function updateStats() {
   try {
-    const resp = await fetch('http://127.0.0.1:5000/api/stats');
+    const resp = await fetch('/api/stats');
     const s = await resp.json();
 
     $statTokens.textContent = s.total_tokens_saved.toLocaleString();
@@ -403,8 +403,8 @@ async function updateStats() {
 // ── Clear cache & history ──────────────────────────────
 async function clearCache() {
   try {
-    await fetch('http://127.0.0.1:5000/api/clear-cache', { method: 'POST' });
-    await fetch('http://127.0.0.1:5000/api/clear-history', { method: 'POST' });
+    await fetch('/api/clear-cache', { method: 'POST' });
+    await fetch('/api/clear-history', { method: 'POST' });
     updateStats();
     
     // Clear chat UI and show welcome screen
