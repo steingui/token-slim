@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
       $statusMsg.textContent = '⏳ Testando conexão...';
       
       try {
-        const resp = await fetch('http://127.0.0.1:5000/api/test-connection', {
+        const resp = await fetch('/api/test-connection', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -280,7 +280,7 @@ async function sendMessage() {
   const typingEl = addTypingIndicator();
 
   try {
-    const resp = await fetch('http://127.0.0.1:5000/api/chat', {
+    const resp = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
