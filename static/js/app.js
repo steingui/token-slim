@@ -389,7 +389,7 @@ function addTypingIndicator() {
 // ── Stats ──────────────────────────────────────────────
 async function updateStats() {
   try {
-    const resp = await fetch(window.location.origin + '/api/stats');
+    const resp = await fetch('/api/stats');
     const s = await resp.json();
 
     $statTokens.textContent = s.total_tokens_saved.toLocaleString();
@@ -598,7 +598,10 @@ async function loadHistory() {
 
 async function checkBackendConnection() {
   try {
-    const res = await fetch('http://127.0.0.1:5000/api/stats');
+    // Avoid cleartext transmission: upgrade to HTTPS when the page itself is served over HTTPS,
+    // otherwise fall back to the previous loopback scheme (local dev server has no TLS).
+    const scheme = window.location.protocol === 'https:' ? 'https' : 'http';
+    const res = await fetch(`${scheme}://127.0.0.1:5000/api/stats`);
     if (res.ok) {
       if (!state.connected) {
         state.connected = true;
