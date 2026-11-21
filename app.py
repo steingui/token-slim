@@ -684,6 +684,8 @@ def openrouter_callback():
         return "Erro: Código de autorização não fornecido.", 400
     
     try:
+        from markupsafe import escape
+
         import requests
         resp = requests.post(
             "https://openrouter.ai/api/v1/auth/keys",
@@ -692,10 +694,13 @@ def openrouter_callback():
         resp_data = resp.json()
         api_key = resp_data.get("key")
         if not api_key:
-            return f"Erro ao gerar chave: {resp_data}", 400
-        
-        redirect_url = f"vscode://steingui.token-slim/auth?provider=openrouter&token={api_key}&baseUrl=https://openrouter.ai/api/v1&model=meta-llama/llama-3-8b-instruct:free"
-        
+            return f"Erro ao gerar chave: {escape(resp_data)}", 400
+
+        # Neutralize untrusted values (derived from user-supplied "code")
+        # before they are embedded into the HTML response (XSS fix).
+        api_key = escape(api_key)
+        redirect_url = escape(f"vscode://steingui.token-slim/auth?provider=openrouter&token={api_key}&baseUrl=https://openrouter.ai/api/v1&model=meta-llama/llama-3-8b-instruct:free")
+
         return f"""
         <html>
             <head>
