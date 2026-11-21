@@ -275,7 +275,7 @@ class TokenSlimUriHandler {
 function getWebviewContent(webview, extensionUri) {
     // Build the template path from the trusted extension URI only (no traversable
     // segments), then confirm it stayed inside the extension directory before reading.
-    const basePath = vscode.Uri.joinPath(extensionUri, 'templates', 'index.html');
+    const basePath = vscode.Uri.file(`${extensionUri.fsPath}/templates/index.html`);
     const baseRoot = path.normalize(extensionUri.fsPath);
     const htmlPath = path.normalize(basePath.fsPath);
     if (htmlPath !== baseRoot && !htmlPath.startsWith(baseRoot + path.sep)) {
