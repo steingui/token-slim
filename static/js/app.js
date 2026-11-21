@@ -389,7 +389,7 @@ function addTypingIndicator() {
 // ── Stats ──────────────────────────────────────────────
 async function updateStats() {
   try {
-    const resp = await fetch('/api/stats');
+    const resp = await fetch(window.location.origin + '/api/stats');
     const s = await resp.json();
 
     $statTokens.textContent = s.total_tokens_saved.toLocaleString();
