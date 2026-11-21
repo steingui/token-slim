@@ -273,7 +273,12 @@ class TokenSlimUriHandler {
 }
 
 function getWebviewContent(webview, extensionUri) {
-    const htmlPath = path.join(extensionUri.fsPath, 'templates', 'index.html');
+    // Validate the resolved template path stays within the extension directory
+    const baseRoot = path.resolve(extensionUri.fsPath);
+    const htmlPath = path.resolve(baseRoot, 'templates', 'index.html');
+    if (htmlPath !== baseRoot && !htmlPath.startsWith(baseRoot + path.sep)) {
+        throw new Error('Invalid template path: traversal outside extension directory');
+    }
     let html = fs.readFileSync(htmlPath, 'utf8');
 
     // Convert CSS path
