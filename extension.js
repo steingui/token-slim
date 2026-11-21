@@ -273,20 +273,22 @@ class TokenSlimUriHandler {
 }
 
 function getWebviewContent(webview, extensionUri) {
-    // Validate the resolved template path stays within the extension directory
-    const baseRoot = path.resolve(extensionUri.fsPath);
-    const htmlPath = path.resolve(baseRoot, 'templates', 'index.html');
+    // Build the template path from the trusted extension URI only (no traversable
+    // segments), then confirm it stayed inside the extension directory before reading.
+    const basePath = vscode.Uri.joinPath(extensionUri, 'templates', 'index.html');
+    const baseRoot = path.normalize(extensionUri.fsPath);
+    const htmlPath = path.normalize(basePath.fsPath);
     if (htmlPath !== baseRoot && !htmlPath.startsWith(baseRoot + path.sep)) {
         throw new Error('Invalid template path: traversal outside extension directory');
     }
     let html = fs.readFileSync(htmlPath, 'utf8');
 
     // Convert CSS path
-    const cssUri = webview.asWebviewUri(vscode.Uri.file(path.join(extensionUri.fsPath, 'static', 'css', 'style.css')));
+    const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'static', 'css', 'style.css'));
     html = html.replace("{{ url_for('static', filename='css/style.css') }}", cssUri.toString());
 
     // Convert JS path
-    const jsUri = webview.asWebviewUri(vscode.Uri.file(path.join(extensionUri.fsPath, 'static', 'js', 'app.js')));
+    const jsUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'static', 'js', 'app.js'));
     html = html.replace("{{ url_for('static', filename='js/app.js') }}", jsUri.toString());
 
     // Replace provider and model
