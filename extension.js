@@ -316,7 +316,8 @@ function syncConfigWithFlask() {
         openaiModel: model
     });
 
-    const req = http.request({
+    const https = require('https');
+    const req = https.request({
         hostname: '127.0.0.1',
         port: 5000,
         path: '/api/update-config',
