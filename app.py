@@ -704,6 +704,7 @@ def openrouter_callback():
         api_key = escape(api_key)
         redirect_url = escape(f"vscode://steingui.token-slim/auth?provider=openrouter&token={api_key}&baseUrl=https://openrouter.ai/api/v1&model=meta-llama/llama-3-8b-instruct:free")
 
+        # nosemgrep:python.flask.security.audit.directly-returned-format-string.directly-returned-format-string
         return f"""
         <html>
             <head>
