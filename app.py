@@ -820,7 +820,8 @@ def github_callback():
             
         redirect_url = f"vscode://steingui.token-slim/auth?provider=github&token={access_token}&baseUrl=https://models.github.ai&model=gpt-4o-mini"
         
-        return f"""
+        page_body = ""
+        return page_body + f"""
         <html>
             <head>
                 <title>Conexão Concluída</title>
