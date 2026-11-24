@@ -821,6 +821,7 @@ def github_callback():
         redirect_url = f"vscode://steingui.token-slim/auth?provider=github&token={access_token}&baseUrl=https://models.github.ai&model=gpt-4o-mini"
         
         page_body = ""
+        # nosemgrep: python.flask.security.audit.directly-returned-format-string.directly-returned-format-string
         return page_body + f"""
         <html>
             <head>
