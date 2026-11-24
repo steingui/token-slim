@@ -174,11 +174,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Listen for config data back from VSCode
   window.addEventListener('message', event => {
     // Only accept messages from trusted VS Code webview origins
-    const trustedOrigins = new Set([window.location.origin]);
-    let trusted = trustedOrigins.has(event.origin);
+    let trusted = event.origin === window.location.origin;
     if (!trusted && event.origin) {
       try {
-        trusted = new URL(event.origin).protocol === 'vscode-webview:';
+        const originUrl = new URL(event.origin);
+        trusted = originUrl.protocol === 'vscode-webview:' &&
+          (window.location.protocol === 'vscode-webview:'
+            ? originUrl.host === window.location.host
+            : true);
       } catch (e) {
         trusted = false;
       }
@@ -581,7 +584,8 @@ function saveConfiguration() {
 // ── Load history ───────────────────────────────────────
 async function loadHistory() {
   try {
-    const resp = await fetch('http://127.0.0.1:5000/api/history');
+    const scheme = window.location.protocol === 'https:' ? 'https' : 'http';
+    const resp = await fetch(`${scheme}://127.0.0.1:5000/api/history`);
     if (!resp.ok) return;
     const history = await resp.json();
     if (history && history.length > 0) {
